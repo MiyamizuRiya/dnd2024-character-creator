@@ -310,7 +310,8 @@
     <div class="nav">
       <button class="btn ghost" onclick="go('details')">← 上一步</button>
       <button class="btn" onclick="exportText()">导出为文本 ⤓</button>
-      <button class="btn" onclick="window.print()">打印 / 保存 PDF</button>
+      <button class="btn" onclick="saveState();window.print()">打印 / 保存 PDF</button>
+      <button class="btn ghost" onclick="confirmReset()" style="border-color:var(--bad);color:var(--bad)">重新开始</button>
     </div>
   </section>
 </div>
@@ -452,7 +453,7 @@ rogue:[4,8,10,12,16],sorcerer:[4,8,12,16],warlock:[4,8,12,16],wizard:[4,8,12,16]
 
 // 戏法数量(按职业+等级)
 function cantripsByLevel(classId,lv){
-  const base={"bard":2,"cleric":3,"druid":2,"sorcerer":4,"warlock":2,"wizard":3,"ranger":2};
+  const base={"bard":2,"cleric":3,"druid":2,"sorcerer":4,"warlock":2,"wizard":3};
   if(!base[classId])return 0;
   let n=base[classId];
   if(lv>=4)n++; if(lv>=10)n++;
@@ -1041,6 +1042,14 @@ function mod(v){return Math.floor((v-10)/2)}
 function modStr(v){const m=mod(v);return (m>=0?"+":"")+m}
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1800)}
 function curClass(){return S.cls?CLASSES.find(c=>c.id===S.cls):null}
+function isSpellcaster(){
+  const c=curClass();
+  if(!c) return false;
+  if(c.spell) return true;
+  if(c.id==="fighter" && S.subClass==="奥法骑士") return true;
+  if(c.id==="rogue" && S.subClass==="诡术师") return true;
+  return false;
+}
 function curSpecies(){return S.species?SPECIES.find(s=>s.id===S.species):null}
 function curBg(){return S.bg?BACKGROUNDS.find(b=>b.id===S.bg):null}
 
@@ -1052,7 +1061,7 @@ function renderStepper(){
   ).join("");
 }
 function go(target){
-  const steps = STEPS.filter(s=> !(s.id==="spell" && curClass() && !curClass().spell));
+  const steps = STEPS.filter(s=> !(s.id==="spell" && !isSpellcaster()));
   let idx;
   if(typeof target==="string"){
     idx = steps.findIndex(s=>s.id===target);
@@ -1299,6 +1308,8 @@ function pickSubclass(name){
   S.subClass=name;
   renderSubclassPick();
   renderClassFeaturesPick();
+  renderStepper();
+  if(isSpellcaster()) renderSpellUI();
 }
 function showSubclassDetail(name){
   const c=curClass(); if(!c) return;
@@ -1760,26 +1771,54 @@ function setBgAll1(idx,v){S.bgAll1[idx]=v;if(S.bgAll1.length<3)S.bgAll1.length=3
 
 /* ---- Spells ---- */
 function maxSpellLevel(){
-  const c=curClass(); if(!c||!c.spell) return 0;
+  if(!isSpellcaster()) return 0;
+  const c=curClass();
+  // 子职施法者(奥法骑士/诡术师):3级1环,7级2环,13级3环,19级4环
+  if((c.id==="fighter"&&S.subClass==="奥法骑士")||(c.id==="rogue"&&S.subClass==="诡术师")){
+    const lv=S.level||1;
+    if(lv<3) return 0;
+    if(lv<=6) return 1;
+    if(lv<=12) return 2;
+    if(lv<=18) return 3;
+    return 4;
+  }
   return maxSpellLevelByClass(c.id, S.level||1);
 }
 function classSpellList(){
-  const c=curClass(); if(!c||!c.spell) return [];
+  if(!isSpellcaster()) return [];
+  const c=curClass();
   const max=maxSpellLevel();
   const lvOrder={"戏法":0,"一环":1,"二环":2,"三环":3,"四环":4,"五环":5,"六环":6,"七环":7,"八环":8,"九环":9};
-  return SPELLS.filter(sp=>sp.cl.includes(c.name) && (lvOrder[sp.lv]||0)<=max);
+  // 子职施法者用法师法术列表
+  const spellClassName = (c.id==="fighter"&&S.subClass==="奥法骑士")||(c.id==="rogue"&&S.subClass==="诡术师") ? "法师" : c.name;
+  return SPELLS.filter(sp=>sp.cl.includes(spellClassName) && (lvOrder[sp.lv]||0)<=max);
 }
 function spellCantripCount(){
-  const c=curClass(); if(!c||!c.spell) return 0;
+  if(!isSpellcaster()) return 0;
+  const c=curClass();
+  // 奥法骑士:2戏法(10级+1)
+  if(c.id==="fighter"&&S.subClass==="奥法骑士"){let n=2;if(S.level>=10)n++;return n;}
+  // 诡术师:3戏法(10级+1)
+  if(c.id==="rogue"&&S.subClass==="诡术师"){let n=3;if(S.level>=10)n++;return n;}
   return cantripsByLevel(c.id, S.level||1);
 }
 function spellTotalCount(){
-  const c=curClass(); if(!c||!c.spell) return 0;
+  if(!isSpellcaster()) return 0;
+  const c=curClass();
   const lv=S.level||1;
+  const max=maxSpellLevel();
+  if(max===0) return 0;
+  // 子职施法者:准备法术数=智力调整值+职业等级/3(向下取整)?? 实际上按规则是固定表
+  // 奥法骑士:3级3个,7级5个,10级6个,14级7个,16级8个,19级9个,20级10个
+  // 诡术师类似。简化:用智力调整值+floor(等级/3)+1
+  if((c.id==="fighter"&&S.subClass==="奥法骑士")||(c.id==="rogue"&&S.subClass==="诡术师")){
+    const fa=finalAbi();
+    const sm=mod(fa["智力"]);
+    return Math.max(1,sm+Math.floor(lv/3)+1);
+  }
   if(c.spellsKnown) return KNOWN_SPELLS[c.id]?KNOWN_SPELLS[c.id][lv]||0:0;
   if(c.spellbookL1) return wizardSpellbook(lv);
   if(c.prepSpells){
-    // 准备法术:施法属性调整值+职业等级
     const fa=finalAbi();
     const sm=mod(fa[c.spellStat]);
     return sm+lv;
@@ -1799,7 +1838,7 @@ function setSpellFilter(v){S.spellFilter.lv=v;renderSpellList()}
 function renderSpellUI(){
   const box=$("spell-ui"),hint=$("spell-hint");
   const c=curClass();
-  if(!c||!c.spell){box.innerHTML="";hint.textContent="";return}
+  if(!isSpellcaster()){box.innerHTML="";hint.textContent="";return}
   const cantripN=spellCantripCount();
   const spellN=spellTotalCount();
   const maxLv=maxSpellLevel();
@@ -1807,7 +1846,9 @@ function renderSpellUI(){
   if(c.spellsKnown) spellDesc="选择 "+spellN+" 个法术(已知法术,固定)";
   else if(c.prepSpells) spellDesc="准备 "+spellN+" 个法术(每日可换)";
   else if(c.spellbookL1) spellDesc="法术书含 "+spellN+" 个法术";
-  hint.innerHTML="<b>"+c.name+"</b>使用<b>"+c.spellStat+"</b>施法。请选择 <b>"+cantripN+"</b> 个戏法 和 <b>"+spellN+"</b> 个法术(最高"+RING_NAMES[maxLv-1]+")。"+spellDesc+"。";
+  if(maxLv===0&&cantripN===0){hint.innerHTML="<b>"+c.name+"</b>当前等级(1-2级)尚未解锁法术。3级开始可获得法术。";box.innerHTML="";return}
+  const spellStat=isSpellcaster()?(c.spellStat||"智力"):"智力";
+  hint.innerHTML="<b>"+c.name+(S.subClass?"("+S.subClass+")":"")+"</b>使用<b>"+spellStat+"</b>施法。请选择 <b>"+cantripN+"</b> 个戏法 和 <b>"+spellN+"</b> 个法术(最高"+RING_NAMES[maxLv-1]+")。"+spellDesc+"。";
   // 环阶筛选按钮(顶部)
   const lvOpts=spellLevelOptions();
   let btnHtml='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">';
@@ -1931,6 +1972,15 @@ function onHeightChange(v){
 /* ---- Sheet ---- *//* ---- Sheet ---- */
 function proficiency(){return profByLevel(S.level||1);}
 function spellSlotsText(classId,lv){
+  // 子职施法者用1/3施法者等级
+  if((classId==="fighter"&&S.subClass==="奥法骑士")||(classId==="rogue"&&S.subClass==="诡术师")){
+    const casterLv=Math.floor(lv/3);
+    if(casterLv<1) return "";
+    const s=FULL_CASTER_SLOTS[casterLv]||[0,0,0,0,0,0,0,0,0];
+    let parts=[];
+    for(let i=0;i<4;i++){if(s[i]>0) parts.push(RING_NAMES[i]+":"+s[i]+"个");}
+    return parts.join("、");
+  }
   if(["bard","cleric","druid","sorcerer","wizard"].includes(classId)){
     const s=FULL_CASTER_SLOTS[lv]; if(!s) return "";
     let parts=[];
@@ -1954,6 +2004,11 @@ function spellSlotsText(classId,lv){
 
 function multiclassSpellSlotsText(){
   const c=curClass();
+  if(!isSpellcaster()) return "";
+  // 子职施法者
+  if((c.id==="fighter"&&S.subClass==="奥法骑士")||(c.id==="rogue"&&S.subClass==="诡术师")){
+    return spellSlotsText(c.id,S.level);
+  }
   const totalCaster=totalCasterLevel();
   const hasWarlock=(c&&c.id==="warlock")||S.multiclass.some(m=>m.classId==="warlock");
   let parts=[];
@@ -2024,8 +2079,9 @@ function renderSheet(){
     if(c.tools) html+=`工具熟练: ${c.tools}${S.toolChoices.length?' → '+S.toolChoices.join('、'):''}\n`;
     const sl=c.skills==="任意"?"任意三项":c.skills.join("、")+"(选"+c.nSkills+")";
     html+=`技能熟练(职业): ${sl}\n已选技能: ${S.chosenSkills.join("、")||"(未选)"}\n`;
-    if(c.spell){
-      const spellAbi=fa[c.spellStat];
+    if(isSpellcaster()){
+      const spellStat=c.spellStat||"智力";
+      const spellAbi=fa[spellStat];
       const spellMod=mod(spellAbi);
       const spellDC=8+prof+spellMod;
       const spellAtk=prof+spellMod;
@@ -2073,7 +2129,7 @@ html+=`</pre>`;}
   $("sheet").innerHTML=html;
 }
 function exportText(){renderSheet();const txt=$("sheet").innerText;const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=($('ch-name').value||'冒险者')+'-DND2024-角色卡.txt';a.click();toast('已导出角色卡');}
-function sync(){if(S.step===STEPS.length-1)renderSheet();}
+function sync(){if(S.step===STEPS.length-1)renderSheet();saveState();}
 
 function pickLevel(v){
   S.level=parseInt(v);
@@ -2104,11 +2160,137 @@ function renderLevelInfo(){
   const el=$('level-info'); if(el) el.innerHTML=info;
 }
 
+
+function saveState(){
+  try{
+    const state={S:S};
+    // 保存表单输入
+    const fields=['ch-name','ch-player','ch-align','ch-gender-age','ch-size','ch-weight','ch-deity','ch-look','ch-backstory','ch-height','char-level','abi-method'];
+    const inputs={};
+    fields.forEach(id=>{
+      const el=document.getElementById(id);
+      if(el){
+        if(el.tagName==='SELECT') inputs[id]=el.selectedIndex;
+        else if(el.type==='range') inputs[id]=el.value;
+        else inputs[id]=el.value;
+      }
+    });
+    state.inputs=inputs;
+    localStorage.setItem('dnd2024_char', JSON.stringify(state));
+  }catch(e){}
+}
+function loadState(){
+  try{
+    const raw=localStorage.getItem('dnd2024_char');
+    if(!raw) return false;
+    const state=JSON.parse(raw);
+    if(state.S){
+      Object.assign(S, state.S);
+    }
+    return true;
+  }catch(e){ return false; }
+}
+function restoreInputs(){
+  try{
+    const raw=localStorage.getItem('dnd2024_char');
+    if(!raw) return;
+    const state=JSON.parse(raw);
+    if(!state.inputs) return;
+    const fields=['ch-name','ch-player','ch-align','ch-gender-age','ch-size','ch-weight','ch-deity','ch-look','ch-backstory','ch-height','char-level','abi-method'];
+    fields.forEach(id=>{
+      const el=document.getElementById(id);
+      if(el && state.inputs[id]!==undefined){
+        if(el.tagName==='SELECT') el.selectedIndex=state.inputs[id];
+        else el.value=state.inputs[id];
+      }
+    });
+  }catch(e){}
+}
+function autoSave(){
+  saveState();
+}
+
+function confirmReset(){
+  if(window.confirm('确定要重新开始吗?所有已选内容将被清除。')){
+    resetAll();
+  }
+}
+function resetAll(){
+  localStorage.removeItem('dnd2024_char');
+  S.step=0;
+  S.level=1;
+  S.cls=null;
+  S.bg=null;
+  S.species=null;
+  S.subClass=null;
+  S.asiChoices=[];
+  S.multiclass=[];
+  S.chosenSkills=[];
+  S.chosenCantrips=[];
+  S.chosenSpells=[];
+  S.chosenInvocations=[];
+  S.invocationChoices={};
+  S.chosenFightingStyles=[];
+  S.chosenMetamagic=[];
+  S.chosenManeuvers=[];
+  S.abi={力量:8,敏捷:8,体质:8,智力:8,感知:8,魅力:8};
+  S.abiMethod="array";
+  S.arrayUsed={};
+  S.bgMode=null;
+  S.bgPlus2=null;
+  S.bgPlus1=null;
+  S.bgAll1=[];
+  S.speciesChoices={};
+  S.toolChoices=[];
+  S.bgTool=null;
+  S.featChoices={};
+  S.rolledValues=[];
+  S.harrowingChoice=null;
+  S.height=170;
+  S.size=null;
+  S.spellFilter={lv:"all",kw:""};
+  // 清空表单输入
+  const fields=['ch-name','ch-player','ch-align','ch-gender-age','ch-size','ch-weight','ch-deity','ch-look','ch-backstory'];
+  fields.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const heightEl=document.getElementById('ch-height');if(heightEl)heightEl.value=170;
+  const levelEl=document.getElementById('char-level');if(levelEl)levelEl.value=1;
+  const methodEl=document.getElementById('abi-method');if(methodEl)methodEl.value='array';
+  // 重新渲染
+  renderStepper();renderClasses();renderBgs();renderSpecies();renderAbi();
+  renderLevelInfo();renderClassInfo();renderSkillPick();renderToolPick();
+  renderSubclassPick();renderClassFeaturesPick();renderBgInfo();renderBgToolPick();
+  renderBgBonusUI();renderAsiPick();renderSpeciesChoices();renderSpeciesInfo();
+  updateHeightRange();renderProgress();renderAbiStats();
+  go('overview');
+}
+
 /* ===== INIT ===== */
 function init(){
+  const restored=loadState();
   renderStepper();renderClasses();renderBgs();renderSpecies();renderAbi();
-  // 初始化法术步骤按钮文字
-  const c=curClass();
+  if(restored){
+    restoreInputs();
+    renderLevelInfo();
+    renderClassInfo();
+    renderSkillPick();
+    renderToolPick();
+    renderSubclassPick();
+    renderClassFeaturesPick();
+    renderBgInfo();
+    renderBgToolPick();
+    renderBgBonusUI();
+    renderAsiPick();
+    renderSpeciesChoices();
+    renderSpeciesInfo();
+    updateHeightRange();
+    renderProgress();
+    renderAbiStats();
+    renderSheet();
+  }
+  // 设置自动保存:每次状态变化时保存
+  setInterval(saveState, 3000);
+  // 页面卸载前保存
+  window.addEventListener('beforeunload', saveState);
 }
 init();
 </script>
