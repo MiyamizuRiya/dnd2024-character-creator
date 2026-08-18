@@ -1229,7 +1229,9 @@ function showBgDetail(){
   body+=`<div class="m-meta"><b>工具熟练:</b>${b.tool}</div>`;
   body+=`<div class="m-meta"><b>装备:</b>${b.gear}</div>`;
   if(feat){body+=`<div class="m-meta" style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px"><b>起源专长:${feat.n}</b></div><div class="m-desc">${feat.d}</div>`;}
-  if(b.harrowingEvent){body+=`<div class=\"m-meta\" style=\"margin-top:14px;border-top:1px solid var(--line);padding-top:10px\"><b>悲惨事件</b></div>`;if(S.harrowingChoice){body+=`<div class=\"m-desc\">${S.harrowingChoice}</div>`;}else{body+=`<div class=\"m-desc\" style=\"color:var(--muted)\">(未选择,请在背景选择界面选取)</div>`;}}renderSpecies();renderSpeciesInfo();renderSpeciesChoices();updateHeightRange();}
+  if(b.harrowingEvent){body+=`<div class="m-meta" style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px"><b>悲惨事件</b></div>`;if(S.harrowingChoice){body+=`<div class="m-desc">${S.harrowingChoice}</div>`;}else{body+=`<div class="m-desc" style="color:var(--muted)">(未选择,请在背景选择界面选取)</div>`;}}
+  showModal(`<h3>${b.name}</h3>`,body);
+}
 function renderSpecies(){
   $("race-list").innerHTML=SPECIES.map(s=>`<div class="opt ${S.species===s.id?'sel':''}" onclick="pickSpecies('${s.id}')"><div class="t">${s.name}</div><div class="s">${sizeLabel(s)} · 速度${s.speed}尺${s.darkvision?' · 黑暗视觉':''}</div></div>`).join("");
 }
