@@ -895,6 +895,7 @@ function go(target){
   if(steps[idx] && steps[idx].id==="progress") { renderProgress(); }
   if(steps[idx] && steps[idx].id==="origin") { renderBgToolPick(); }
   if(steps[idx] && steps[idx].id==="ability") { renderAsiPick(); }
+  if(steps[idx] && steps[idx].id==="details") { updateHeightRange(); }
 }
 
 function renderClasses(){
