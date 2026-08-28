@@ -13,7 +13,7 @@
 
 ## 部署
 
-`netlify-deploy/index.html` 与 `DND工具合集.html` 内容相同(改名为 index.html 的部署副本)。
+`index.html`(根目录)、`netlify-deploy/index.html`、`DND工具合集.html` 三者内容相同,均为合集部署入口。Netlify Publish 目录为根 `/`。
 Netlify 站点的 Publish 目录设为 `netlify-deploy`。
 
 ## 数据来源
