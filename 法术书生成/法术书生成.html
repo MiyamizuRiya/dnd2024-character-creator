@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>法术书生成 · D&D 5r 2024 玩家手册</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- 顶栏：标题 + 已选统计 + 操作 -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-title">法术书生成</span>
+      <span class="brand-sub">D&amp;D 5r 2024 · 玩家手册</span>
+    </div>
+    <div class="summary" id="summary" aria-live="polite">
+      <span class="summary-hint">在左侧勾选法术，右侧实时排版预览</span>
+    </div>
+    <div class="char-name">
+      <input id="charName" type="text" placeholder="角色名（可选）" title="可选；导出时文件名会带上角色名" maxlength="40">
+    </div>
+    <div class="actions">
+      <input type="file" id="importFile" accept=".md,.markdown,.json,.txt" hidden>
+      <button type="button" id="importBtn" class="btn btn-ghost" title="从文件导入已选法术与排序">📥 导入</button>
+      <button type="button" id="exportBtn" class="btn btn-ghost" title="导出已选法术为可分享文件">📤 导出</button>
+      <button type="button" id="clearBtn" class="btn btn-ghost" title="清空所有已选">清空</button>
+      <button type="button" id="printBtn" class="btn btn-primary" title="打印或保存为 PDF">🖨 打印为 PDF</button>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <!-- 左：选择器 -->
+    <section class="picker" aria-label="法术选择">
+      <div class="filters">
+        <div class="search-row">
+          <input type="search" id="search" class="search" placeholder="搜索法术名（中文 / English）…" autocomplete="off">
+        </div>
+        <div class="filter-row">
+          <label class="sel">
+            <span>环阶</span>
+            <select id="levelFilter"></select>
+          </label>
+          <label class="sel">
+            <span>学派</span>
+            <select id="schoolFilter"></select>
+          </label>
+          <label class="sel">
+            <span>职业</span>
+            <select id="classFilter"></select>
+          </label>
+        </div>
+        <div class="filter-row toggles">
+          <label class="toggle"><input type="checkbox" id="ritualFilter"> <span>仪式</span></label>
+          <label class="toggle"><input type="checkbox" id="concFilter"> <span>专注</span></label>
+          <label class="toggle"><input type="checkbox" id="onlySelected"> <span>仅显示已选</span></label>
+          <span class="list-count" id="listCount">0 / 0</span>
+        </div>
+      </div>
+      <div class="spell-list" id="spellList"></div>
+    </section>
+
+    <!-- 右：打印预览 -->
+    <section class="preview" aria-label="打印预览">
+      <div class="preview-toolbar">
+        <div class="tb-left">
+          <div class="page-info">
+            已选 <b id="selCount">0</b> 个 · 共 <b id="pageCount">0</b> 页（每页最多 6 张：3 行 × 2 列；过长法术自动占 2 行 1 列）
+          </div>
+          <button type="button" id="sortBtn" class="btn btn-sort" title="按环阶从小到大排序所有已选法术">⇅ 一键排序</button>
+        </div>
+        <div class="preview-tools">
+          <label class="paper-size"><span>纸张</span>
+            <select id="pageSize">
+              <option value="A4">A4</option>
+              <option value="Letter">Letter</option>
+            </select>
+          </label>
+          <button type="button" id="zoomOut" class="btn btn-ghost btn-sm">−</button>
+          <span id="zoomLabel" class="zoom-label">100%</span>
+          <button type="button" id="zoomIn" class="btn btn-ghost btn-sm">＋</button>
+        </div>
+      </div>
+      <div class="preview-scroll" id="previewScroll">
+        <div class="pages" id="pages">
+          <div class="empty-state" id="emptyState">
+            <div class="empty-illus">🃏</div>
+            <p>尚未选择任何法术。</p>
+            <p class="muted">在左侧勾选法术，即可在此处排版为可打印的卡片。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script type="module">
+  // 在线时从 CDN 加载拼音库，用于声音近似搜索（如 摩登肯→魔邓肯）。
+  // 加载失败则静默退化：字符级模糊仍可用（匕首云、狂笑塔莎 等不受影响）。
+  (async () => {
+    try {
+      const mod = await import("https://cdn.jsdelivr.net/npm/pinyin-pro@3/+esm");
+      const p = mod.pinyin || (mod.default && mod.default.pinyin) || mod.default;
+      if (typeof p === "function") { window.__pinyin = p; window.dispatchEvent(new Event("pinyin-ready")); }
+    } catch (e) { /* 离线或被拦截：忽略，使用字符级回退 */ }
+  })();
+</script>
+<script src="data/spells.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

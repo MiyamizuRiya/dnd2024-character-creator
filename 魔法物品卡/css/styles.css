@@ -1,0 +1,183 @@
+/* ============================================================
+   魔法物品卡 · D&D 2024 城主指南
+   奇幻主题：羊皮纸 / 皮革 / 金色 / 稀有度配色
+   左：搜索+自定义表单  右：打印预览（每页 3行×2列=6张，过长占2格）
+   ============================================================ */
+* { box-sizing: border-box; }
+:root {
+  --topbar-h: 58px;
+  --bg:#e3d6b6; --desk:#cdbf99; --panel:#fbf5e2; --panel-2:#f1e6c8;
+  --ink:#281b0f; --ink-soft:#6b5436; --line:#d9c9a0; --line-strong:#bca478;
+  --leather:#1f130a; --leather-2:#3a2418;
+  --gold:#c9a227; --gold-dk:#9c6b1f; --gold-soft:#f6e3b8; --gold-line:#d9b84a;
+  --crimson:#8b1e2d; --select:#b8860b; --select-soft:#f6e3b8;
+  --serif: Georgia,"Cinzel","Times New Roman","Songti SC","STSong",serif;
+  --r-普通:#7a6f5e; --r-非普通:#2f7d4f; --r-珍稀:#2a5d9e; --r-极珍稀:#6b2f9e;
+  --r-传说:#b0801f; --r-神器:#8b1e2d; --r-多种稀有度:#1f7d77;
+}
+html,body{margin:0;padding:0;height:100%;font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC","Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;}
+#app{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+
+/* 顶栏 */
+.topbar{height:var(--topbar-h);flex:0 0 var(--topbar-h);display:flex;align-items:center;gap:16px;padding:0 20px;background:linear-gradient(90deg,#1c1109 0%,#3a2418 55%,#2a190d 100%);color:#f4e3b0;border-bottom:2px solid var(--gold-dk);box-shadow:0 2px 6px rgba(0,0,0,.25),inset 0 -1px 0 rgba(201,162,39,.35);z-index:5;}
+.brand{display:flex;flex-direction:column;line-height:1.05;flex:0 0 auto;}
+.brand-title{font-family:var(--serif);font-weight:700;font-size:19px;letter-spacing:1px;color:#e8c75a;text-shadow:0 1px 0 rgba(0,0,0,.4);}
+.brand-sub{font-size:11px;color:#c9a96a;letter-spacing:.5px;}
+.summary{flex:1 1 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;overflow:hidden;}
+.summary-hint{color:#c9a96a;font-style:italic;font-size:12px;}
+.sum-item{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.10);color:#f4e3b0;font-size:11px;border:1px solid rgba(201,162,39,.25);}
+.sum-item b{font-size:12px;color:#fff;}
+.sum-item.zero{opacity:.4;}
+.sum-total{margin-left:6px;padding:2px 10px;border-radius:10px;background:rgba(201,162,39,.30);font-weight:600;color:#fff;border:1px solid rgba(201,162,39,.45);}
+.actions{display:flex;gap:8px;flex:0 0 auto;}
+.btn{border:1px solid transparent;border-radius:8px;padding:8px 15px;font-size:13px;cursor:pointer;font-family:inherit;line-height:1;transition:background .12s,border-color .12s,transform .05s;}
+.btn:active{transform:translateY(1px);}
+.btn-primary{background:linear-gradient(180deg,#e3c057,#c9a227);color:#2a190d;font-weight:700;border-color:#9c6b1f;box-shadow:0 1px 2px rgba(0,0,0,.3);}
+.btn-primary:hover{background:linear-gradient(180deg,#f0d068,#d4af37);}
+.btn-ghost{background:transparent;color:#e8c75a;border-color:rgba(201,162,39,.55);}
+.btn-ghost:hover{background:rgba(201,162,39,.16);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-sort{background:linear-gradient(180deg,#e3c057,#c9a227);color:#2a190d;border:1px solid #9c6b1f;font-weight:600;padding:6px 12px;font-size:12px;box-shadow:0 1px 2px rgba(0,0,0,.25);}
+.btn-sort:hover{background:linear-gradient(180deg,#f0d068,#d4af37);}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(10px);background:#1f130a;color:#f4e3b0;padding:10px 18px;border-radius:8px;border:1px solid var(--gold-dk);box-shadow:0 6px 16px rgba(0,0,0,.35);font-size:13px;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:80vw;text-align:center;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* 布局 */
+.layout{flex:1 1 auto;display:flex;min-height:0;}
+.picker,.preview{display:flex;flex-direction:column;min-height:0;}
+.picker{width:450px;flex:0 0 450px;border-right:1px solid var(--line-strong);background:var(--panel);}
+.preview{flex:1 1 auto;background:var(--desk);min-width:0;}
+
+/* 筛选 + 自定义表单 */
+.filters{flex:0 0 auto;padding:11px 13px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:9px;background:var(--panel-2);}
+.search{width:100%;padding:9px 12px;font-size:13px;border:1px solid var(--line-strong);border-radius:8px;font-family:inherit;background:#fffdf5;color:var(--ink);}
+.search:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,162,39,.25);}
+.filter-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.sel{display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--ink-soft);flex:1 1 0;min-width:0;}
+.sel select{padding:6px 6px;font-size:12px;border:1px solid var(--line-strong);border-radius:6px;background:#fffdf5;color:var(--ink);font-family:inherit;cursor:pointer;}
+.toggles{justify-content:flex-start;}
+.toggle{display:inline-flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;user-select:none;color:var(--ink);}
+.toggle input{margin:0;cursor:pointer;accent-color:var(--gold-dk);}
+.list-count{margin-left:auto;font-size:11px;color:var(--ink-soft);}
+.link-btn{background:none;border:none;color:var(--gold-dk);cursor:pointer;font-size:11px;font-family:inherit;padding:0;text-decoration:underline;}
+
+/* 自定义表单 */
+.custom-box{background:#fbf2d8;border:1px dashed var(--line-strong);border-radius:8px;padding:8px 10px;}
+.custom-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:var(--ink-soft);}
+.custom-form{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+.custom-form.hidden{display:none;}
+.custom-form input,.custom-form select,.custom-form textarea{padding:6px 8px;font-size:12px;border:1px solid var(--line-strong);border-radius:6px;font-family:inherit;background:#fffdf5;color:var(--ink);}
+.custom-form textarea{resize:vertical;line-height:1.5;}
+.custom-form input:focus,.custom-form select:focus,.custom-form textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px rgba(201,162,39,.2);}
+.c-row{display:flex;gap:6px;align-items:center;}
+.c-row .sel{flex:1;}
+.c-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.hidden{display:none !important;}
+
+/* 物品列表 */
+.spell-list{flex:1 1 auto;overflow-y:auto;padding:6px 6px 40px;}
+.spell-item{position:relative;display:flex;align-items:flex-start;gap:9px;padding:11px 12px;border-radius:8px;margin:2px 0;border:1px solid transparent;cursor:pointer;user-select:none;min-height:44px;transition:background .1s,border-color .1s;}
+.spell-item:hover{background:#f3e8cb;}
+.spell-item:focus-visible{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px rgba(201,162,39,.3);}
+.spell-item.selected{background:var(--gold-soft);border-color:var(--gold-line);box-shadow:inset 3px 0 0 var(--gold);}
+.sel-mark{flex:0 0 auto;width:22px;height:22px;margin-top:1px;border-radius:50%;border:2px solid #b8a06a;background:#fffdf5;pointer-events:none;display:flex;align-items:center;justify-content:center;font-size:12px;color:#2a190d;font-weight:700;transition:background .1s,border-color .1s;}
+.spell-item:hover .sel-mark{border-color:var(--gold-dk);}
+.spell-item.selected .sel-mark{background:linear-gradient(180deg,#e3c057,#c9a227);border-color:var(--gold-dk);}
+.item-body{flex:1 1 auto;min-width:0;}
+.item-name{font-size:13px;font-weight:600;color:var(--ink);}
+.item-name .en{font-weight:400;color:var(--ink-soft);font-size:11px;margin-left:4px;}
+.item-meta{font-size:11px;color:var(--ink-soft);margin-top:3px;display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
+.badge{display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600;color:#fff;line-height:1.5;background:#7a6f5e;white-space:nowrap;}
+.badge.r-普通{background:var(--r-普通)} .badge.r-非普通{background:var(--r-非普通)} .badge.r-珍稀{background:var(--r-珍稀)}
+.badge.r-极珍稀{background:var(--r-极珍稀)} .badge.r-传说{background:var(--r-传说)} .badge.r-神器{background:var(--r-神器)}
+.badge.r-多种稀有度{background:var(--r-多种稀有度)}
+.badge.att{background:#3a6ea5}
+.school{font-weight:600;}
+.detail-btn{flex:0 0 auto;align-self:flex-start;border:1px solid var(--line-strong);background:#fffdf5;border-radius:6px;padding:4px 9px;font-size:11px;cursor:pointer;color:var(--ink-soft);font-family:inherit;}
+.detail-btn:hover{color:var(--gold-dk);border-color:var(--gold);background:#fbf2d8;}
+.detail-btn.open{color:var(--gold-dk);border-color:var(--gold);background:#fbf2d8;}
+.item-detail{margin-top:7px;padding:8px 10px;background:#fffdf5;border:1px dashed var(--line-strong);border-radius:6px;font-size:12px;line-height:1.55;color:var(--ink);}
+.item-detail.hidden{display:none;}
+.ddesc{margin:6px 0 0;white-space:pre-wrap;}
+.custom-flag{font-size:10px;padding:0 5px;border-radius:8px;background:var(--crimson);color:#fff;margin-left:4px;vertical-align:1px;}
+.mini-btn{border:1px solid var(--line-strong);background:#fffdf5;border-radius:5px;padding:2px 6px;font-size:11px;cursor:pointer;color:var(--ink-soft);font-family:inherit;}
+.mini-btn:hover{color:var(--crimson);border-color:var(--crimson);}
+.mini-btn.edt:hover{color:var(--gold-dk);border-color:var(--gold);}
+
+/* 预览工具条 */
+.preview-toolbar{flex:0 0 auto;height:46px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--panel-2);border-bottom:1px solid var(--line-strong);font-size:13px;color:var(--ink);}
+.page-info b{color:var(--crimson);}
+.tb-left{display:flex;align-items:center;gap:14px;}
+.preview-tools{display:flex;align-items:center;gap:8px;}
+.paper-size{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-soft);}
+.paper-size select{padding:3px 4px;font-size:12px;border:1px solid var(--line-strong);border-radius:6px;background:#fffdf5;color:var(--ink);font-family:inherit;}
+.zoom-label{font-size:12px;color:var(--ink-soft);min-width:38px;text-align:center;}
+.preview-scroll{flex:1 1 auto;overflow:auto;padding:26px 0;}
+#pages{display:flex;flex-direction:column;align-items:center;gap:24px;transform-origin:top center;}
+.page-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.page-label{font-size:11px;color:var(--ink-soft);font-family:var(--serif);}
+.page{background:#f6efdb;box-shadow:0 2px 8px rgba(60,40,15,.22),0 0 0 1px var(--line-strong);display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:var(--gap,5mm);overflow:hidden;}
+#pages{--page-w:190mm;--page-h:276mm;--gap:5mm;}
+#pages[data-size="Letter"]{--page-w:195.9mm;--page-h:258mm;}
+.page{width:var(--page-w);height:var(--page-h);gap:var(--gap);}
+.empty-state{text-align:center;color:var(--ink-soft);padding:80px 20px;}
+.empty-illus{font-size:48px;opacity:.5;}
+.empty-state .muted{font-size:12px;opacity:.7;}
+
+/* 物品卡 */
+.card{position:relative;border:1.4px solid #6b4a1f;border-radius:4px;padding:4mm 4.5mm;overflow:hidden;display:flex;flex-direction:column;gap:1.5mm;background:#fdf8ea;color:var(--ink);font-size:8.6pt;line-height:1.34;}
+.card-head{display:flex;align-items:baseline;justify-content:space-between;gap:4px;border-bottom:1.5px solid #8a5a2a;padding-bottom:1.5mm;}
+.card-name{font-size:11.6pt;font-weight:700;font-family:var(--serif);color:#1f130a;}
+.card-name .en{font-size:8.6pt;color:#6b4a1f;font-weight:500;margin-left:3px;font-family:Georgia,serif;}
+.card-tag{font-size:7.8pt;font-weight:600;color:#fff;padding:0 5px;border-radius:3px;white-space:nowrap;align-self:center;background:var(--r-普通);}
+.card.r-普通 .card-tag{background:var(--r-普通)} .card.r-非普通 .card-tag{background:var(--r-非普通)}
+.card.r-珍稀 .card-tag{background:var(--r-珍稀)} .card.r-极珍稀 .card-tag{background:var(--r-极珍稀)}
+.card.r-传说 .card-tag{background:var(--r-传说)} .card.r-神器 .card-tag{background:var(--r-神器)}
+.card.r-多种稀有度 .card-tag{background:var(--r-多种稀有度)}
+.card-meta{font-size:8pt;color:#4a3a28;margin:0;font-style:italic;}
+.card-meta .att{font-style:normal;color:var(--crimson);font-weight:600;}
+.card-desc{margin:0;flex:1 1 auto;overflow:hidden;font-size:8.2pt;line-height:1.36;white-space:pre-wrap;word-break:break-word;color:#2a1d12;}
+.card.empty{border:0;background:transparent;}
+.card[draggable="true"]{cursor:grab;}
+.card[draggable="true"]:active{cursor:grabbing;}
+.card.dragging{opacity:.35;}
+.card.drop-target{box-shadow:inset 0 0 0 2px var(--gold),inset 0 0 0 4px var(--gold-dk);}
+.pin-btn,.edit-btn,.del-btn{position:absolute;top:1.5mm;border:1px solid #8a5a2a;background:rgba(253,248,234,.92);color:#6b4a1f;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s,background .12s,color .12s;z-index:3;font-size:10px;line-height:1;font-weight:700;}
+.pin-btn{right:1.5mm;width:15px;height:15px;padding:0;}
+.edit-btn{right:20px;width:15px;height:15px;padding:0;font-size:11px;}
+.del-btn{right:38px;width:15px;height:15px;padding:0;color:#8b1e2d;border-color:#8b1e2d;}
+.card:hover .pin-btn,.card:hover .edit-btn,.card:hover .del-btn{opacity:1;}
+.pin-btn:hover{background:var(--gold);color:#2a190d;border-color:var(--gold-dk);}
+.edit-btn:hover{background:var(--gold);color:#2a190d;border-color:var(--gold-dk);}
+.del-btn:hover{background:var(--crimson);color:#fff;border-color:var(--crimson);}
+.card .card-meta:empty,.card .card-desc:empty{min-height:8pt;}
+/* 卡片：消耗品徽章 + 充能圆圈 */
+.card-tags{display:flex;align-items:center;gap:4px;align-self:center}
+.cons-badge{font-size:6.6pt;font-weight:700;color:#fff;background:var(--crimson);padding:0 5px;border-radius:3px;white-space:nowrap;line-height:1.6}
+.att-tag{font-size:6.6pt;font-weight:700;color:#fff;background:#3a6ea5;padding:0 5px;border-radius:3px;white-space:nowrap;line-height:1.6}
+.charge-circles{display:flex;align-items:center;gap:3.5px;justify-content:flex-end;flex-wrap:wrap;margin-top:1.5mm;min-height:10pt}
+.c-circle{width:13px;height:13px;border:1.4px solid #6b4a1f;border-radius:50%;background:transparent;display:inline-block;flex:0 0 auto}
+.cc-label{font-size:7.5pt;color:#6b4a1f;margin-right:5px;font-weight:600;white-space:nowrap}
+/* 左列表：消耗品徽标 + 计数 + 减号 */
+.badge.cons{background:#8b1e2d}
+.cnt-badge{display:inline-block;margin-left:5px;padding:0 6px;border-radius:8px;background:var(--gold);color:#2a190d;font-size:11px;font-weight:700;line-height:1.5}
+.mini-btn.dec{border:1px solid var(--line-strong);background:#fffdf5;border-radius:5px;padding:2px 7px;font-size:13px;cursor:pointer;color:#8b1e2d;font-family:inherit;line-height:1}
+.mini-btn.dec:hover{background:#f6d8d8;border-color:var(--crimson);}
+
+/* 打印 */
+@media print{
+  html,body{background:#fff;height:auto;}
+  #app{display:block;height:auto;overflow:visible;}
+  .topbar,.picker,.preview-toolbar,.empty-state,.page-label,.toast,.pin-btn,.edit-btn,.del-btn,#__measurer{display:none !important;}
+  .layout{display:block;}
+  .preview{display:block;background:#fff;}
+  .preview-scroll{display:block;overflow:visible;padding:0;}
+  #pages{transform:none !important;gap:0 !important;display:block;}
+  .page-wrap{gap:0;break-after:page;}
+  .page-wrap:last-child{break-after:auto;}
+  .page{box-shadow:none !important;width:var(--page-w) !important;height:var(--page-h) !important;}
+  .card{break-inside:avoid;box-shadow:none;}
+}
+@page{size:A4;margin:10mm;}
+@page letter{size:Letter;margin:10mm;}
+#pages[data-size="Letter"] .page-wrap{page:letter;}
