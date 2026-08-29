@@ -23,6 +23,7 @@
     openDetails: new Set(),// 展开详情的 id
     pageSize: "A4",
     zoom: 100,
+    scrollMode: false,     // 法术卷轴模式：卡片隐藏升环施法、显示可施放职业
     _dragId: null,         // 当前拖拽的法术 id
     _pageCount: 0,         // 实际分页页数（由 renderPreview 计算）
   };
@@ -192,8 +193,10 @@
 
   // ---------- 渲染：右预览 ----------
   function cardHtml(s, gridStyle) {
-    const higher = s.higherLevels
+    const higher = (!state.scrollMode && s.higherLevels)
       ? `<p class="card-higher"><b>${esc(s.higherLevels.kind)}。</b> ${esc(s.higherLevels.text)}</p>` : "";
+    const classesRow = state.scrollMode
+      ? `<div class="m-classes"><dt>职业</dt><dd>${esc(classesStr(s))}</dd></div>` : "";
     const ritTag = s.ritual ? '<span class="dd-tag r">仪式</span>' : "";
     const concTag = s.concentration ? '<span class="dd-tag c">专注</span>' : "";
     const styleAttr = gridStyle ? ` style="${gridStyle}"` : "";
@@ -208,6 +211,7 @@
         <div><dt>距离</dt><dd>${esc(s.range)}</dd></div>
         <div><dt>成分</dt><dd>${esc(compText(s.components))}</dd></div>
         <div><dt>持续</dt><dd>${esc(s.duration)}${concTag}</dd></div>
+        ${classesRow}
       </dl>
       <p class="card-desc">${esc(s.description)}</p>
       ${higher}
@@ -524,6 +528,15 @@ ${json}
 
     // 一键排序
     $("#sortBtn").addEventListener("click", sortSelected);
+
+    // 法术卷轴模式：隐藏升环施法、显示可施放职业（影响右侧卡片与打印件）
+    $("#scrollBtn").addEventListener("click", () => {
+      state.scrollMode = !state.scrollMode;
+      $("#scrollBtn").classList.toggle("active", state.scrollMode);
+      renderPreview();
+      renderSummary();
+      showToast(state.scrollMode ? "卷轴模式：卡片已隐藏升环施法，显示可施放职业" : "已退出卷轴模式");
+    });
 
     // 预览区：置顶按钮 + 拖拽手动排序（委托在 #pages 上，重渲染后仍生效）
     const pages = $("#pages");

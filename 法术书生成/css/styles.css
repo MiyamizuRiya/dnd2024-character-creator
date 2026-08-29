@@ -116,6 +116,13 @@ html.embedded .topbar { padding-right: 190px; }
   padding: 6px 12px; font-size: 12px; box-shadow: 0 1px 2px rgba(0,0,0,.25);
 }
 .btn-sort:hover { background: linear-gradient(180deg, #f0d068, #d4af37); }
+/* 法术卷轴模式：按钮激活态（深红，区别于金色普通态） */
+#scrollBtn.active {
+  background: linear-gradient(180deg, #a0243b, #8b1e2d);
+  color: #f4e3b0; border-color: #6b1522;
+  box-shadow: 0 1px 2px rgba(0,0,0,.3);
+}
+#scrollBtn.active:hover { background: linear-gradient(180deg, #b02a44, #8b1e2d); }
 
 /* 导入/导出反馈提示 */
 .toast {
@@ -293,6 +300,9 @@ html.embedded .topbar { padding-right: 190px; }
 .card-meta > div { display: flex; gap: 3px; align-items: baseline; }
 .card-meta dt { font-weight: 700; color: #6b4a1f; font-size: 7.6pt; white-space: nowrap; margin: 0; }
 .card-meta dd { margin: 0; font-size: 8pt; color: #2a1d12; }
+/* 卷轴模式：职业行横跨整行 */
+.card-meta .m-classes { grid-column: 1 / -1; }
+.card-meta .m-classes dd { font-weight: 600; color: #6b4a1f; }
 .dd-tag { font-size: 7pt; padding: 0 4px; border-radius: 8px; color:#fff; margin-left:3px; vertical-align: 1px; }
 .dd-tag.c{background:var(--crimson)} .dd-tag.r{background:#3a6ea5}
 
