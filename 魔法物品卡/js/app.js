@@ -113,7 +113,7 @@
 
   // ---------- 测量与分页（超出一格 → 占2行1列） ----------
   const PX_PER_MM = 96 / 25.4;
-  const PAGE_DIMS = { A4: { w: 190, h: 276 }, Letter: { w: 195.9, h: 258 } };
+  const PAGE_DIMS = { A4: { w: 189, h: 276 }, Letter: { w: 194.9, h: 258 } };
   const GAP_MM = 5;
   function getCellDims() { const d = PAGE_DIMS[state.pageSize] || PAGE_DIMS.A4; return { w: ((d.w - GAP_MM) / 2) * PX_PER_MM, h: ((d.h - 2 * GAP_MM) / 3) * PX_PER_MM }; }
   function computeSizes(entries) {

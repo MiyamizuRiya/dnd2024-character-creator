@@ -221,7 +221,7 @@
   // ---------- 卡片尺寸测量与分页排版 ----------
   // 长 description 的法术 → 大型卡（占 2 行 1 列 = 2 格），该页少放 1 个法术；绝不遮挡其它卡。
   const PX_PER_MM = 96 / 25.4;
-  const PAGE_DIMS = { A4: { w: 190, h: 276 }, Letter: { w: 195.9, h: 258 } };
+  const PAGE_DIMS = { A4: { w: 189, h: 276 }, Letter: { w: 194.9, h: 258 } };
   const GAP_MM = 5;
   function getCellDims() {
     const d = PAGE_DIMS[state.pageSize] || PAGE_DIMS.A4;

@@ -268,9 +268,9 @@ html.embedded .topbar { padding-right: 190px; }
   gap: var(--gap, 5mm);
   overflow: hidden;
 }
-/* A4 / Letter 内容区（= 纸张 - 左右/上下页边距 10mm，再留 1mm 防溢出空白页） */
-#pages { --page-w: 190mm; --page-h: 276mm; --gap: 5mm; }
-#pages[data-size="Letter"] { --page-w: 195.9mm; --page-h: 258mm; }
+/* A4 / Letter 内容区（= 纸张 - 左右/上下页边距 10mm，宽高各再留 1mm 余量：防打印时最右列卡片边框被裁 / 溢出空白页） */
+#pages { --page-w: 189mm; --page-h: 276mm; --gap: 5mm; }
+#pages[data-size="Letter"] { --page-w: 194.9mm; --page-h: 258mm; }
 .page { width: var(--page-w); height: var(--page-h); gap: var(--gap); }
 
 .empty-state { text-align: center; color: var(--ink-soft); padding: 80px 20px; }

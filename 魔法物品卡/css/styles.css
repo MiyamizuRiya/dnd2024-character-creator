@@ -117,8 +117,9 @@ html,body{margin:0;padding:0;height:100%;font-family:"PingFang SC","Microsoft Ya
 .page-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;}
 .page-label{font-size:11px;color:var(--ink-soft);font-family:var(--serif);}
 .page{background:#f6efdb;box-shadow:0 2px 8px rgba(60,40,15,.22),0 0 0 1px var(--line-strong);display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:var(--gap,5mm);overflow:hidden;}
-#pages{--page-w:190mm;--page-h:276mm;--gap:5mm;}
-#pages[data-size="Letter"]{--page-w:195.9mm;--page-h:258mm;}
+/* 内容区 = 纸张 - 页边距10mm,宽高各再留 1mm 余量,防打印时最右列卡片边框被裁 */
+#pages{--page-w:189mm;--page-h:276mm;--gap:5mm;}
+#pages[data-size="Letter"]{--page-w:194.9mm;--page-h:258mm;}
 .page{width:var(--page-w);height:var(--page-h);gap:var(--gap);}
 .empty-state{text-align:center;color:var(--ink-soft);padding:80px 20px;}
 .empty-illus{font-size:48px;opacity:.5;}
