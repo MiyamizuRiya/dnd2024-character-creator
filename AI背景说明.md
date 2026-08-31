@@ -23,10 +23,16 @@
 
 ## 二、新电脑上手
 
-1. **只想用**:拿到 `DND工具合集.html` 单文件,双击即可(`file://` 直接运行;联网时拼音搜索等更佳)。
-2. **要看文档**:`DMsBestFriend/项目文档.md`(即本文件的分发副本)。
-3. **要开发**:把整个 `DND工具站源码合集/` 文件夹拷过去(或 `git clone https://github.com/MiyamizuRiya/dnd2024-character-creator`)。需要 **Node.js**(任意新版,零 npm 依赖)用来跑构建脚本。
-4. **改完源码后**:运行 `node build.js` 重建合集(见「四」),再提交推送即自动上线。
+`DMsBestFriend/` 就是**完整分发包**,整个文件夹拷到新电脑即可:
+
+- `DND工具合集.html` —— 即拿即用的三合一合集单文件,双击就能用
+- `项目文档.md` —— 本文档的分发副本
+- `开发密钥与新电脑指南.md` —— GitHub Token、git 身份、仓库/部署地址、推送命令与网络坑备用方案
+- `DND工具站源码合集/` —— 完整源码(含 `.git` 历史与 origin、build.js),进去就能继续开发
+
+也可以不用分发包,直接 `git clone https://github.com/MiyamizuRiya/dnd2024-character-creator`。开发只需 **Node.js**(任意新版,零 npm 依赖,跑构建脚本用)。
+
+**改完源码后**:运行 `node build.js` 重建合集(见「四」),再提交推送即自动上线。
 
 ## 三、线上部署
 
