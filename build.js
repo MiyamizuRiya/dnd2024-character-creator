@@ -13,7 +13,6 @@ const path = require('path');
 const ROOT = __dirname;
 
 const read = p => fs.readFileSync(path.join(ROOT, p), 'utf8');
-const escHtml = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const escJsInline = s => s.replace(/<\/script>/g, '<\\/script>');   // 防内联截断
 const escCssInline = s => s.replace(/<\/style>/g, '<\\/style>');
 
@@ -45,10 +44,7 @@ const SPELLBOOK_B64 = b64(spellbookHtml);
 const ADVENTURER_B64 = b64(adventurerHtml);
 const ITEMS_B64 = b64(itemsHtml);
 
-/* ---------- 4) 项目文档(嵌入合集入口页) ---------- */
-const DOC_HTML = escHtml(read('AI背景说明.md'));
-
-/* ---------- 5) 合集模板 ---------- */
+/* ---------- 4) 合集模板(项目文档不嵌入网页,独立 md 分发) ---------- */
 const wrapper = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -71,12 +67,6 @@ iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#0d0
 .gate-card .ico{font-size:2.6rem;display:block;margin-bottom:10px}
 .gate-card .t{color:#e8c75a;font-size:1.15rem;font-weight:700;font-family:Georgia,serif}
 .gate-card .s{color:#b9a888;font-size:.78rem;margin-top:6px;line-height:1.5}
-#docToggle{background:none;border:1px solid #5a4632;color:#c9a96a;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:.85rem;font-family:inherit}
-#docToggle:hover{border-color:#c9a227;color:#e8c75a}
-#docPanel{display:none;width:min(880px,94vw);max-height:60vh;overflow:auto;background:#171009;border:1px solid #5a4632;border-radius:12px;padding:22px 26px;text-align:left}
-#docPanel.show{display:block}
-#docPanel h2{color:#e8c75a;font-family:Georgia,serif;margin:0 0 10px;font-size:1.1rem}
-.doc-pre{white-space:pre-wrap;word-break:break-word;color:#d9c9a0;font-size:.76rem;line-height:1.6;font-family:Consolas,"Cascadia Code","Microsoft YaHei",monospace;margin:0}
 .gate-foot{color:#7a6a52;font-size:.75rem;text-align:center}
 </style>
 </head>
@@ -104,8 +94,6 @@ iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#0d0
       <div class="s">魔法物品卡<br>419 条魔法物品 · 排版打印</div>
     </button>
   </div>
-  <button type="button" id="docToggle">📖 项目文档</button>
-  <div id="docPanel"><h2>项目文档</h2><pre class="doc-pre">${DOC_HTML}</pre></div>
   <div class="gate-foot">工具间互不干扰 · 右上角「☰ 选择工具」随时返回本页 · 三个工具后台常驻,切换不丢状态</div>
 </div>
 <script>
@@ -148,9 +136,6 @@ tg.addEventListener('click', backToGate);
 Array.prototype.forEach.call(document.querySelectorAll('.gate-card'), function(c){
   c.addEventListener('click', function(){ enter(c.getAttribute('data-tool')); });
 });
-document.getElementById('docToggle').addEventListener('click', function(){
-  document.getElementById('docPanel').classList.toggle('show');
-});
 </script>
 </body>
 </html>
@@ -174,7 +159,7 @@ console.log('三副本一致: ' + eq);
 console.log('法术书含: SPELL_DATA=' + chkSb.includes('SPELL_DATA') + ' scrollMode=' + chkSb.includes('scrollMode') + ' 189mm=' + chkSb.includes('189mm'));
 console.log('人物卡含: 守序邪恶=' + chkAv.includes('守序邪恶') + ' grantedSpells=' + chkAv.includes('grantedSpells') + ' @media print=' + chkAv.includes('@media print'));
 console.log('物品卡含: ITEM_DATA=' + chkIt.includes('ITEM_DATA') + ' embedded=' + chkIt.includes('embedded') + ' 189mm=' + chkIt.includes('189mm'));
-console.log('合集含: gate=' + wrapper.includes('id="gate"') + ' items iframe=' + wrapper.includes('id="items"') + ' 文档=' + wrapper.includes('项目文档') + ' 菜单按钮=' + wrapper.includes('选择工具'));
+console.log('合集含: gate=' + wrapper.includes('id="gate"') + ' items iframe=' + wrapper.includes('id="items"') + ' 菜单按钮=' + wrapper.includes('选择工具') + ' 无文档面板=' + (!wrapper.includes('docToggle') && !wrapper.includes('docPanel')));
 if (!eq || !chkSb.includes('SPELL_DATA') || !chkAv.includes('守序邪恶') || !chkIt.includes('ITEM_DATA')) {
   console.error('!! 自检失败');
   process.exit(1);

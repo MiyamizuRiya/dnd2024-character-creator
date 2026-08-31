@@ -1,7 +1,7 @@
 # D&D 2024 工具站 · 总体项目文档
 
 > 给 AI 助手与新电脑接手的人阅读:这是什么、怎么用、怎么改、怎么重建合集、怎么部署、有哪些坑。
-> 最近更新:2026-08-29(合集改造成三工具 + 入口选择页 + build.js 构建脚本)。
+> 最近更新:2026-08-31(项目文档改为独立 md 分发,合集内不再嵌文档面板)。
 
 ## 一、这是什么
 
@@ -15,16 +15,18 @@
 | **DND 工具合集** | `DND工具合集.html` | 三工具各自 base64 内联进**一个自包含 html**,blob-URL 三 iframe 隔离,互不干扰。**= 部署版/分发版** |
 
 **合集结构**(2026-08-29 起):
-- 打开合集先见**入口选择页**(gate):三张大卡(人物卡/法术卡/物品卡)+ 「📖 项目文档」按钮(展开本文档全文)。
+- 打开合集先见**入口选择页**(gate):三张大卡(人物卡/法术卡/物品卡)。
 - 点卡片进入对应工具;工具视图右上角固定按钮 **「☰ 选择工具」** 点击即回到选择页(取代旧的双工具互换按钮)。
 - 三个 iframe **启动时全部加载**(display 切换),工具状态在来回切换间保留。
 - 部署入口有三个内容完全相同的文件:`index.html`(仓库根,Netlify 用)、`netlify-deploy/index.html`、`DND工具合集.html`。
+- **项目文档不嵌入网页**,以独立 md 分发:`DMsBestFriend/项目文档.md`(内容即本文件)。
 
 ## 二、新电脑上手
 
-1. **只想用**:拿到 `DND工具合集.html` 单文件,双击即可(`file://` 直接运行;联网时拼音搜索等更佳)。文档在合集入口页「📖 项目文档」里。
-2. **要开发**:把整个 `DND工具站源码合集/` 文件夹拷过去(或 `git clone https://github.com/MiyamizuRiya/dnd2024-character-creator`)。需要 **Node.js**(任意新版,零 npm 依赖)用来跑构建脚本。
-3. **改完源码后**:运行 `node build.js` 重建合集(见「四」),再提交推送即自动上线。
+1. **只想用**:拿到 `DND工具合集.html` 单文件,双击即可(`file://` 直接运行;联网时拼音搜索等更佳)。
+2. **要看文档**:`DMsBestFriend/项目文档.md`(即本文件的分发副本)。
+3. **要开发**:把整个 `DND工具站源码合集/` 文件夹拷过去(或 `git clone https://github.com/MiyamizuRiya/dnd2024-character-creator`)。需要 **Node.js**(任意新版,零 npm 依赖)用来跑构建脚本。
+4. **改完源码后**:运行 `node build.js` 重建合集(见「四」),再提交推送即自动上线。
 
 ## 三、线上部署
 
@@ -50,7 +52,7 @@ build.js 做的事:
 2. **内联物品卡**:同法处理 `魔法物品卡/index.html` + css/js/data。
 3. **读冒险者指南**全文(本就自包含)。
 4. **base64**:三者分别 `Buffer.from(html,'utf8').toString('base64')`(即 UTF-8 字节→base64;合集里的 `dec()` 用 `TextDecoder+atob` 解码,与之互逆,**别改成纯 atob**,中文会乱码)。
-5. **组装合集**:模板 = 入口选择页(gate)+ 三个 iframe + 「☰ 选择工具」按钮 + 文档面板(本文件全文 HTML 转义后嵌入)+ `SPELLBOOK_B64`/`ADVENTURER_B64`/`ITEMS_B64` 三个变量与启动脚本。
+5. **组装合集**:模板 = 入口选择页(gate)+ 三个 iframe + 「☰ 选择工具」按钮 + `SPELLBOOK_B64`/`ADVENTURER_B64`/`ITEMS_B64` 三个变量与启动脚本(项目文档不嵌入,独立 md 分发)。
 6. **写出三副本**:`DND工具合集.html`、`index.html`、`netlify-deploy/index.html`(三者必须 byte-equal)并自检(解码回环含关键代码、三副本一致)。
 
 ## 五、数据来源
@@ -122,11 +124,11 @@ DND工具站源码合集/            ← 本地即 git 仓库(origin=GitHub 上�
 - **改人物卡**:直接改 `DND2024冒险者创建指南.html`,然后 `node build.js`。
 - **改法术卡**:`法术书生成/js/app.js`(逻辑)、`data/spells.js`(数据)、`css/styles.css`(样式),然后 `node build.js`。
 - **改物品卡**:`魔法物品卡/` 下对应文件,然后 `node build.js`。
-- **改合集本身**(选择页/菜单按钮/文档面板):改 `build.js` 里的模板,重新构建。
-- **改文档**:改 `AI背景说明.md`,重新构建(文档会嵌进合集)。
+- **改合集本身**(选择页/菜单按钮):改 `build.js` 里的模板,重新构建。
+- **改文档**:改 `AI背景说明.md`;分发时把最新内容同步为 `DMsBestFriend/项目文档.md`。
 - **部署**:改源码 → `node build.js` → `git add -A && git commit` → push `main`(代理坑见九,失败走 API)→ Netlify+Pages 自动上线。
 - **用户输入一律过 `esc()`** 再进 innerHTML。
 
 ## 十一、一句话总结
 
-三套 D&D 2024 中文静态工具站(人物卡/法术卡/物品卡)+ 一个三合一自包含合集(入口选择页+菜单切换,文档内嵌);合集由 `node build.js` 从源码构建(改源码必须重建并同步三入口);push `main` 到 `MiyamizuRiya/dnd2024-character-creator` 即自动部署 Netlify 主站(Publish 目录=仓库根!)+ GitHub Pages;原开发机无 shell、git 代理坑多,Node 直调是万能解。
+三套 D&D 2024 中文静态工具站(人物卡/法术卡/物品卡)+ 一个三合一自包含合集(入口选择页+菜单切换);合集由 `node build.js` 从源码构建(改源码必须重建并同步三入口);项目文档独立为 md 分发(`DMsBestFriend/项目文档.md`);push `main` 到 `MiyamizuRiya/dnd2024-character-creator` 即自动部署 Netlify 主站(Publish 目录=仓库根!)+ GitHub Pages;原开发机无 shell、git 代理坑多,Node 直调是万能解。
