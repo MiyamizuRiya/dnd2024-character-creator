@@ -1,166 +1,132 @@
-# D&D 2024 工具站源码合集 · AI 背景说明
+# D&D 2024 工具站 · 总体项目文档
 
-> 本文件给 AI 助手阅读，帮助快速理解这套项目是什么、数据从哪来、怎么跑、怎么改、怎么部署、有哪些坑。人类也可读。
-> 最近大更新：2026-08-28(修复一批审查问题 + 建立 GitHub→Netlify 部署链路)。详见「八、2026-08-28 修复记录」。
+> 给 AI 助手与新电脑接手的人阅读:这是什么、怎么用、怎么改、怎么重建合集、怎么部署、有哪些坑。
+> 最近更新:2026-08-29(合集改造成三工具 + 入口选择页 + build.js 构建脚本)。
 
 ## 一、这是什么
 
-一套**纯静态**(HTML + CSS + JS，无构建、无后端、无 npm)的 D&D 2024 中文工具站。共 4 个工具：
+一套**纯静态**(HTML/CSS/JS,无构建依赖、无后端、无 npm)的 D&D 2024 中文工具站,共三个工具 + 一个合集:
 
 | 工具 | 入口 | 说明 |
 |---|---|---|
-| **法术书生成** | `法术书生成/法术书生成.html` | 搜索/筛选法术 → 勾选 → 右侧实时排版成可打印法术卡(每页 3 行 × 2 列 = 6 张)。数据 `data/spells.js`(`window.SPELL_DATA`,391 条)。 |
-| **魔法物品卡** | `魔法物品卡/index.html` | 同款魔法物品卡排版站。数据 `data/items.js`(`window.ITEM_DATA`,419 条)。 |
-| **冒险者创建指南** | `DND2024冒险者创建指南.html` | 单文件自包含。分步生成 1 级冒险者角色卡,`localStorage` 存状态(key `dnd2024_char`)。 |
-| **DND 工具合集** | `DND工具合集.html` | 把法术书+冒险者指南**整页 base64 内联**进一个自包含 html,blob-URL 双 iframe 隔离,右上角金色 ⇄ 切换。**= 部署版**。 |
+| **人物卡**(冒险者创建指南) | `DND2024冒险者创建指南.html` | 单文件自包含,分步生成 1 级冒险者角色卡,`localStorage` 存状态 |
+| **法术卡**(法术书生成) | `法术书生成/法术书生成.html` | 搜索/筛选/勾选法术 → 实时排版成可打印法术卡(每页 3×2=6 张)。数据 `data/spells.js`(391 条) |
+| **物品卡**(魔法物品卡) | `魔法物品卡/index.html` | 同款魔法物品卡排版站。数据 `data/items.js`(419 条),支持消耗品/充能/自定义卡 |
+| **DND 工具合集** | `DND工具合集.html` | 三工具各自 base64 内联进**一个自包含 html**,blob-URL 三 iframe 隔离,互不干扰。**= 部署版/分发版** |
 
-**部署上有三个内容完全相同的合集入口文件**(见「二、线上部署」的同步要求):
-- 根目录 `index.html`
-- `netlify-deploy/index.html`
-- `DND工具合集.html`
+**合集结构**(2026-08-29 起):
+- 打开合集先见**入口选择页**(gate):三张大卡(人物卡/法术卡/物品卡)+ 「📖 项目文档」按钮(展开本文档全文)。
+- 点卡片进入对应工具;工具视图右上角固定按钮 **「☰ 选择工具」** 点击即回到选择页(取代旧的双工具互换按钮)。
+- 三个 iframe **启动时全部加载**(display 切换),工具状态在来回切换间保留。
+- 部署入口有三个内容完全相同的文件:`index.html`(仓库根,Netlify 用)、`netlify-deploy/index.html`、`DND工具合集.html`。
 
-## 二、线上部署 ⚠️ 重点
+## 二、新电脑上手
 
-| 渠道 | 地址 | 触发方式 |
+1. **只想用**:拿到 `DND工具合集.html` 单文件,双击即可(`file://` 直接运行;联网时拼音搜索等更佳)。文档在合集入口页「📖 项目文档」里。
+2. **要开发**:把整个 `DND工具站源码合集/` 文件夹拷过去(或 `git clone https://github.com/MiyamizuRiya/dnd2024-character-creator`)。需要 **Node.js**(任意新版,零 npm 依赖)用来跑构建脚本。
+3. **改完源码后**:运行 `node build.js` 重建合集(见「四」),再提交推送即自动上线。
+
+## 三、线上部署
+
+| 渠道 | 地址 | 触发 |
 |---|---|---|
-| **Netlify(主站)** | https://create-your-dnd2024-pc.netlify.app | push 到 GitHub `main` **自动部署** |
-| **GitHub Pages(镜像)** | https://miyamizuriya.github.io/dnd2024-character-creator | push 到 `main` 自动构建 |
+| **Netlify(主站)** | https://create-your-dnd2024-pc.netlify.app | push GitHub `main` 自动部署 |
+| **GitHub Pages(镜像)** | https://miyamizuriya.github.io/dnd2024-character-creator | push `main` 自动构建 |
 
-- GitHub 仓库:**`MiyamizuRiya/dnd2024-character-creator`**(https://github.com/MiyamizuRiya/dnd2024-character-creator),分支 `main`。
-- **⚠️ Netlify 的 Publish 目录 = 仓库根目录 `/`**。所以**根目录必须有 `index.html`**。
-  - 2026-08-28 出过一次事故:一次推送把合集入口只放在 `netlify-deploy/` 子目录,根目录没有 index.html → 全站 404。已修复(根目录补 index.html)。**改文件结构时千万别重蹈覆辙**。
-- GitHub Pages 配置:branch `main` / path `/`(legacy 构建器)。它默认入口也是根 index.html。
-- `5echm.kagangtuya.top` **与本项目无关**——那只是数据来源参考站,不是本项目的部署。
+- 仓库:`MiyamizuRiya/dnd2024-character-creator`,分支 `main`。
+- ⚠️ **Netlify Publish 目录 = 仓库根**,根目录必须有 `index.html`(曾因入口只在 `netlify-deploy/` 子目录导致全站 404,已修复——勿重蹈覆辙)。
+- `5echm.kagangtuya.top` 与本项目无关,只是数据来源参考站。
 
-### 部署的唯一动作
+## 四、构建流程(build.js)⚠️ 必读
 
-改完源码 → 按下面「四、构建流程」重建合集 → 三个入口文件同步 → `git commit` → push `main` → Netlify 与 Pages 各自自动上线(Netlify 通常 1~2 分钟)。
+**合集是构建产物**:改了 `法术书生成/`、`魔法物品卡/`、`DND2024冒险者创建指南.html` 或本文档之后,直接改合集 HTML 无效(下次构建会覆盖),必须改源码再重建:
 
-## 三、数据来源
+```
+node build.js
+```
 
-均来自中文 5e 参考站 **https://5echm.kagangtuya.top**(站名「5E 不全书」,WinCHM 转 HTML,JS 生成的目录树 + 嵌套 frame 页):
+build.js 做的事:
+1. **内联法术书**:`法术书生成/法术书生成.html` 的三个外链(`<link css/styles.css>`、`<script data/spells.js>`、`<script js/app.js>`)替换为内联 `<style>`/`<script>`(内联时把 `</script>` 转义成 `<\/script>` 防截断)→ 得到自包含法术书 HTML。
+2. **内联物品卡**:同法处理 `魔法物品卡/index.html` + css/js/data。
+3. **读冒险者指南**全文(本就自包含)。
+4. **base64**:三者分别 `Buffer.from(html,'utf8').toString('base64')`(即 UTF-8 字节→base64;合集里的 `dec()` 用 `TextDecoder+atob` 解码,与之互逆,**别改成纯 atob**,中文会乱码)。
+5. **组装合集**:模板 = 入口选择页(gate)+ 三个 iframe + 「☰ 选择工具」按钮 + 文档面板(本文件全文 HTML 转义后嵌入)+ `SPELLBOOK_B64`/`ADVENTURER_B64`/`ITEMS_B64` 三个变量与启动脚本。
+6. **写出三副本**:`DND工具合集.html`、`index.html`、`netlify-deploy/index.html`(三者必须 byte-equal)并自检(解码回环含关键代码、三副本一致)。
 
-- **法术**:`玩家手册2024/法术详述/0环.htm … 9环.htm`(10 页,h4+`<p>` 结构)。
-- **魔法物品**:`城主指南2024/7.宝藏/魔法物品详述/{护甲,药水,戒指,卷轴,武器,法杖,魔杖,权杖,奇物[装饰品/其他物品/着装品]}/{稀有度}.htm`。
-  - ⚠️ 站点目录树(TOC)里穿戴类奇物链接写的是 `着装物品/`,**那是 404 失效旧路径**;真路径是 **`着装品/`**(少一个「物」字)。
-  - 多稀有度物品(治疗药水等)在源站是一个带表格的条目,已**展开成各变体独立卡片**。
-- **冒险者创建指南**:原源文件在 `C:\Users\<user>\.zcode\workspace\default\DND2024冒险者创建指南.html`;本合集里的是其副本(已大量修改,以此为准)。
-- 法术对象字段:`castingTime, classes[], components{material,materials,raw,somatic,verbal}, concentration, description, duration, id, level, nameEn, nameZh, range, ritual, school, higherLevels{kind,text}, source` 等。`components.materials` 是材料说明文字(如"一点磷")。
+## 五、数据来源
 
-## 四、构建流程:从源码重建合集 ⚠️ 必读
+均来自中文 5e 参考站 **https://5echm.kagangtuya.top**「5E 不全书」(WinCHM 转 HTML、JS 渲染的 frame 站,**普通 curl/WebFetch 抓不到**,需浏览器自动化):
+- 法术:`玩家手册2024/法术详述/0环.htm…9环.htm`
+- 物品:`城主指南2024/7.宝藏/魔法物品详述/{类别}/{稀有度}.htm`
+  - ⚠️ TOC 里「着装物品/」是 404 失效旧路径,真路径是 **「着装品/」**(少一个字);多稀有度物品已展开成独立变体卡。
+- 法术字段含 `components{material,materials,raw,...}`(materials 是材料说明文字)、`higherLevels{kind,text}`(升环施法)、`classes[]`(可施放职业)。
 
-**什么时候需要**:改了 `法术书生成/` 下任何文件或 `DND2024冒险者创建指南.html` 之后。合集(DND工具合集.html / index.html / netlify-deploy/index.html)是**构建产物**,直接改它没用——下次重建会覆盖;必须改源码再重建。
+## 六、技术要点
 
-**步骤**(Node 即可,无 npm 依赖):
+- **纯静态零依赖**:`file://` 双击即跑;http 部署下 blob iframe 与父页同源,postMessage 互通。
+- **打印 = 浏览器打印**:`window.print()` + `@media print` 只输出卡片网格(A4/Letter)。
+- **卡片装箱**:离屏测高 → 超 1 格占 2 格、超 2 格占 3 格(整列);`computeSizes`+`packPages` 2×3 网格装箱,绝不重叠。
+- **页面尺寸留余量**:`--page-w` = 纸宽−页边距−1mm(A4 189mm / Letter 194.9mm)。这 1mm 是**必须的**:曾因零余量导致打印 PDF 时最右列卡片右边框被裁(已修)。改页面尺寸时 CSS 与 app.js 的 `PAGE_DIMS` 必须同步。
+- **拼音搜索**(仅法术书):在线动态 import jsdelivr 的 pinyin-pro,离线退化字符级模糊。
+- **法术卷轴模式**(法术书):「📜 法术卷轴」切换按钮,卡片隐藏升环施法、显示可施放职业(`state.scrollMode`)。
+- **天赋法术贯通(A2)**:人物卡端 `grantedSpells()` 计算种族/血系授予法术,`broadcastGranted()` 经 `parent.frames` postMessage `{type:'dnd:granted',spells:[中文名]}`;法术书端监听并按 `nameZh` 加入已选(另有 request 应答握手)。只加不减。**合集三个 iframe 时此机制依然有效**(items 无监听,收不到也无害)。
+- **内嵌让位(A1)**:法术书/物品卡检测 `window.parent!==window` 时给 `<html>` 加 `embedded` class,顶栏右侧留 130px 给合集的「☰ 选择工具」按钮;独立打开无留白。
+- **键盘可达**:人物卡用 MutationObserver 给 onclick 的 div 补 `role=button`+`tabindex`,全局 Enter/Space 委托。
+- **XSS**:人物卡全局 `esc()`,用户输入进 innerHTML 前必须转义;法术书/物品卡本就有 esc。
+- **奇幻主题**:羊皮纸/皮革/金;法术环阶 `--l0~l9`、稀有度 `--r-*` 在 `:root`。
 
-1. **内联法术书**:读 `法术书生成/法术书生成.html`,把三个外链替换成内联:
-   - `<link rel="stylesheet" href="css/styles.css">` → `<style>…styles.css 全文…</style>`
-   - `<script src="data/spells.js"></script>` → `<script>…spells.js 全文…</script>`
-   - `<script src="js/app.js"></script>` → `<script>…app.js 全文…</script>`
-   - 内联 JS 前把 `</script>` 替换成 `<\/script>`(防截断);内联 CSS 同理处理 `</style>`。
-   - 保留那段动态 `import('https://cdn.jsdelivr.net/npm/pinyin-pro@3/+esm')` 的 module 脚本不动。
-2. **base64 编码**:
-   - `SPELLBOOK_B64 = Buffer.from(内联后的法术书html, 'utf8').toString('base64')`
-   - `ADVENTURER_B64 = Buffer.from(冒险者指南.html全文, 'utf8').toString('base64')`
-   - 即「**UTF-8 字节 → base64**」。wrapper 里的解码函数 `dec` 用 `TextDecoder + atob`,是 UTF-8 安全的,与该编码方式配套,别改成纯 `atob`(会乱码)。
-3. **注入 wrapper**:取旧合集 html,替换两个变量值:
-   - `var SPELLBOOK_B64 = "…";` 和 `var ADVENTURER_B64 = "…";`(base64 不含引号,可用正则 `/var SPELLBOOK_B64 = "[^"]*";/` 安全匹配)。
-   - wrapper 其余部分(iframe、toggle、dec、setSrc)不用动。
-4. **三副本同步**:把重建产物同时写到 `DND工具合集.html`、`netlify-deploy/index.html`、根 `index.html`(三者内容必须一致)。
-5. **验证**:解码回来 `Buffer.from(b64,'base64').toString('utf8')` 应含全部新代码;两份部署副本 byte-equal。
-
-## 五、技术要点
-
-- **纯静态、零依赖**:原生 HTML/CSS/JS,无框架。`file://` 双击即跑;http 部署同源(blob iframe 与父页同源,postMessage/localStorage 可互通)。
-- **打印 = 浏览器打印**:`window.print()` + `@media print`。法术书只显示卡片网格;冒险者指南隐藏顶栏/步骤条/导航、保留羊皮纸底色(`print-color-adjust:exact`)、`break-inside:avoid` 防表格断页。
-- **卡片装箱**:离屏测量自然高度 → 超 1 格占 2 格,超 2 格占 3 格(整列);`computeSizes`+`packPages` 做 2×3 网格装箱,绝不重叠/溢出。
-- **拼音搜索**:在线时从 jsdelivr 动态 import `pinyin-pro`,离线退化字符级模糊(编辑距离+LCS)。物品站未接拼音层。
-- **合集架构**:两工具各自 base64→blob URL→iframe;两 iframe **同时加载**(display 切换),同源,可 postMessage 互通。
-- **天赋法术贯通(A2,2026-08-28 新增)**:冒险者指南端 `grantedSpells()` 计算种族/血系授予的法术(阿斯莫→光亮术;精灵血系 卓尔/高等精灵/木精灵;侏儒血系;提夫林三系遗赠,含 3/5 级解锁),`broadcastGranted()` 经 `parent.frames[i].postMessage` 广播 `{type:'dnd:granted',spells:[中文名]}`;法术书端 `applyGrantedMessage` 监听并按 `nameZh` 加入已选,另有 `{type:'dnd:requestGranted'}` 请求-应答握手兜底时序。**只加不减**(换种族不自动移除旧天赋法术)。
-- **内嵌检测(A1)**:法术书 `init` 里 `window.parent!==window` 时给 `<html>` 加 `embedded` class,CSS `html.embedded .topbar{padding-right:190px}` 为合集右上角切换按钮让位;独立打开无此留白。
-- **键盘可达(C21)**:冒险者指南用 MutationObserver 给所有带 onclick 的 div 自动补 `role=button`+`tabindex=0`,全局 keydown 委托 Enter/Space 触发 click。
-- **XSS 防护(C20)**:冒险者指南有全局 `esc()`,所有用户输入(角色名/外貌/背景/信仰等)写入 innerHTML 前必须过 `esc()`。新代码同样要遵守。
-- **奇幻主题**:羊皮纸/皮革/金色;环阶 `--l0~--l9`、稀有度 `--r-*` 配色变量在 `:root`。
-
-## 六、文件结构
+## 七、文件结构
 
 ```
 DND工具站源码合集/            ← 本地即 git 仓库(origin=GitHub 上述库)
-├─ AI背景说明.md              ← 本文件
-├─ README.md                  ← GitHub 仓库门面说明
-├─ .gitignore / .gitattributes ← 忽略 OS/编辑器文件;强制 html/css/js/md 换行=LF(保护 base64 单行)
-├─ index.html                 ← 合集部署入口①(=DND工具合集.html)
-├─ DND工具合集.html           ← 合集部署入口②(自包含)
-├─ DND2024冒险者创建指南.html  ← 冒险者指南源(自包含,≈2300行)
-├─ netlify-deploy/
-│   └─ index.html             ← 合集部署入口③(与①②相同)
-├─ 法术书生成/
-│   ├─ 法术书生成.html        ← 入口(引用 css/js/data)
-│   ├─ css/styles.css
-│   ├─ data/spells.js         ← window.SPELL_DATA=[391法术](单行压缩,Read工具读不动,用 Node 读)
-│   ├─ js/app.js              ← 全部交互逻辑(IIFE)
-│   └─ 问题清单.md            ← 早前审查(大部分已修,见第八节)
-└─ 魔法物品卡/
-    ├─ index.html / css/styles.css / data/items.js / js/app.js
-    └─ 显示问题清单.md         ← 物品站审查(大部分已修)
+├─ AI背景说明.md              ← 本文件(总体项目文档,同时被嵌入合集)
+├─ README.md                  ← GitHub 门面
+├─ build.js                   ← 合集构建脚本(node build.js,零依赖)
+├─ .gitignore / .gitattributes
+├─ index.html                 ← 合集部署入口①(=构建产物)
+├─ DND工具合集.html           ← 合集②(自包含,可直接分发)
+├─ DND2024冒险者创建指南.html  ← 人物卡源(自包含,≈2300 行)
+├─ netlify-deploy/index.html  ← 合集③
+├─ 法术书生成/                ← 法术卡源(入口+css+js+data)
+└─ 魔法物品卡/                ← 物品卡源(入口+css+js+data)
 ```
 
-## 七、功能清单
+## 八、修复与功能记录
 
-卡片站共有:搜索/筛选 · 整行点选 · 多张同物品 · 置顶/一键排序/拖拽排序 · 导入导出 md(可读列表+内嵌 JSON,按 id+名称回退) · 空白自定义卡 · 消耗品徽章 · 充能圆圈 · A4/Letter+缩放。
-法术书额外:拼音模糊搜索、角色名(导出文件名+角色卡显示)、材料成分说明、DC/攻击加值显示(见八)。
-冒险者指南:九步流程(概览/等级/职业/进阶/起源/属性/法术/细节/角色卡),属性四种生成法(标准数列/购点/掷点/手动),兼职、子职、专长/传奇恩惠、魔能祈唤、战斗风格、超魔法、战技,角色表含豁免/技能加值与被动察觉,导出 txt/打印 PDF,`localStorage` 自动存档(3 秒间隔+beforeunload)。
+**2026-08-29**:
+- 合集改三合一:魔法物品卡并入(ITEMS_B64+第三 iframe),新增入口选择页与「☰ 选择工具」菜单按钮(替代旧双工具互换)。
+- 新增 build.js 构建脚本与本文档嵌入。
+- 修复打印 PDF 最右列卡片右边框被裁:页面宽度留 1mm(A4 189/Letter 194.9,CSS+PAGE_DIMS 同步)。
+- 法术书新增「法术卷轴」模式:卡片隐藏升环施法、显示可施放职业。
 
-## 八、2026-08-28 修复记录
-
-对照 `法术书生成/问题清单.md` 的编号(D 节优先 13 项全修 + A2 部分):
-
-**冒险者创建指南**(`DND2024冒险者创建指南.html`):
-- C1 `init()` 改调 `go(S.step)`,重载后还原步骤面板
-- C2 `ASI_LEVELS` 各职业加 19(传奇恩惠可达);`renderLevelInfo` 不把 19 计入"属性提升"计数
-- C3 `asiBonusTotal` 计入专长/传奇恩惠 `+1` 属性(featAttr);`detectFeatAttrs` 支持单属性自动选、"提升属性/提升一项…"识别为任选;epic 分支补属性选择 UI
-- C4 HP 计入健壮(背景/人类起源/ASI 专长三处来源,`hasTough`)+ 矮人刚毅 `+1/级`
-- C5 `effSpeed/effDarkvision`:木精灵 35 尺、卓尔 120 尺黑视上角色表
-- C6 掷点按**掷值索引**去重(`S.rollAssign`+`setRollAssign`),正确处理重复掷值
-- C7 阵营补守序/中立/混乱邪恶
-- C8 顺带修复:技能行去重、职业未选时不再塌缩
-- C9/C10/C11 角色表:豁免加值(`力量 +5`式)、技能加值、被动察觉
-- C17/C18 `@media print` + `@page{margin:12mm}` + 分页控制
-- C20 全局 `esc()` 转义所有用户输入
-- C21 MutationObserver 键盘可达(见五)
-- C22 `sync`/`pickSpeciesChoice` 用过滤后末步索引(非施法者角色表正确刷新)
-
-**法术书生成**(`法术书生成/js/app.js`、`css/styles.css`):
-- B1 `compText` 附材料说明:`V、S、M（一点磷）`
-- B2 三档卡片尺寸(size=3 占整列),超长法术不再被裁
-- A1 内嵌时顶栏右让 190px(见五)
-
-**合集/贯通**:
-- A2(部分)天赋法术 postMessage 流入法术书(见五)
-- 根目录补 `index.html` 修复 Netlify 404 事故(见二)
-
-**未修**(问题清单仍在,后续可做):C12-C16、C19、C23-C30(战技描述空、奇械师数据、子职法术结构化等)、B3-B7、A3。A2 的"替换式同步"(换种族自动移除旧天赋法术)未做,当前为只加不减。
+**2026-08-28**(对照 `法术书生成/问题清单.md` 编号,D 节优先 13 项全修+A2 部分):
+- 人物卡:C1 重载还原步骤 / C2 19级传奇恩惠 / C3 专长属性计入 / C4 健壮+矮人HP / C5 血系速度黑视 / C6 掷点去重 / C7 阵营邪恶 / C8 技能去重 / C9-C11 豁免技能被动加值 / C17-C18 打印样式 / C20 XSS转义 / C21 键盘可达 / C22 步骤索引。
+- 法术书:B1 材料说明上卡 / B2 三档卡片 / A1 切换按钮让位。
+- A2:种族天赋法术 postMessage 流入法术书(只加不减)。
+- **未修**(问题清单仍在):C12-C16、C19、C23-C30、B3-B7、A3。
 
 ## 九、已知坑 / 环境注意 ⚠️
 
-1. **开发机 Git Bash 崩**:`STATUS_DLL_INIT_FAILED`(疑似杀软注入 msys dll),**没有可用 shell**。文件/命令操作全部走 Node(`child_process.execSync` 直调 git/curl 可用;bash 包装命令全挂)。
-2. **git 走的代理经常不在线**:git 全局配了 `http.proxy=http://127.0.0.1:9098`(本地代理客户端,时常关闭)。连不上 GitHub 时加 `-c http.proxy= -c https.proxy=` 直连绕过。
-3. **GFW 间歇性拦截**:`api.github.com` 大多可达;`github.com:443`(git push 端点)、`*.netlify.app`、`*.github.io` 时通时断(直连常见 `ECONNRESET`)。**git push 失败时的可靠备用路径**:GitHub **Git Data API**(Node HTTPS 直连 api.github.com):`POST /git/blobs`(base64 内容)→ `POST /git/trees`(base_tree=远程当前 tree)→ `POST /git/commits`(parent=远程 HEAD)→ `PATCH /git/refs/heads/main`。注意 Contents API 单文件限 1MB,合集 index.html 1.3MB 必须走 Git Data API。
-4. **git 本地/远程分叉现状**:远程 main 与本地 main 各有一个内容相同但 SHA 不同的修复提交(远程 `72fc32d`,本地 `0fa8239`,parent 同为 `e99f2f3`,tree 等价)。不影响部署;下次正式改动前建议先对齐(`git -c http.proxy= -c https.proxy= fetch origin && git reset --hard origin/main`,或干脆 force push)。
-5. **合集的拼音层**:blob iframe 在 `file://` 下源为 null,远程 CDN import 可能被拦 → 退化字符级模糊(不影响主功能)。
-6. **真机渲染未实测**:开发机内置浏览器(IAB)坏,验证靠静态检查+纯函数单测(语法 `new Function`、blob 解码回验、`asiBonusTotal/packPages/compText/grantedSpells` 等 22 条单测全过)。
-7. **大文件读取**:`data/spells.js`(239KB 单行压缩)与合集 html 超出 Read 工具 token 限制,要用 Node `fs` 读。
-8. **安全**:部署用过的 GitHub PAT 用完即弃,不要写进任何文件/git 配置。当前 origin URL 不含 token(干净)。
+1. **原开发机 Git Bash 崩**(`STATUS_DLL_INIT_FAILED`,疑似杀软注入):无可用 shell,文件/命令操作走 Node(`child_process.execSync` 直调 git/curl 可用)。
+2. **git 代理坑**:全局配了 `http.proxy=http://127.0.0.1:9098` 且代理常不在线,连 GitHub 失败时加 `-c http.proxy= -c https.proxy=` 直连绕过。
+3. **GFW 间歇拦截**:`api.github.com` 大多可达;`github.com:443`(git push)、`*.netlify.app`、`*.github.io` 时通时断。**git push 失败的可靠备用**:GitHub **Git Data API**(Node 直连 api.github.com):`POST /git/blobs`(base64 内容)→ `POST /git/trees`(base_tree=远程当前 tree)→ `POST /git/commits`(parent=远程 HEAD)→ `PATCH /git/refs/heads/main`。⚠️ URL path 含中文文件名必须 `encodeURIComponent`;Contents API 单文件限 1MB(合集 1.3MB 必须走 Git Data API);blob/tree/commit 创建成功但 ref 更新报 "not a fast forward" 时先重查远程 HEAD(可能已推进)。
+4. **本地/远程偶发等价提交分叉**(API 与 git 两种推送方式造成):内容一致、SHA 不同,不影响部署;网络好时 `git fetch origin && git reset --hard origin/main` 或 force push 对齐。
+5. **大文件读取**:`data/spells.js`、`data/items.js`、合集 html 超出某些读取工具 token 限制,用 Node `fs` 处理。
+6. **合集拼音层**:blob iframe 在 `file://` 下源为 null,CDN import 可能被拦→退化字符级模糊(不影响主功能)。
+7. **真机渲染未实测**(开发机内置浏览器坏):验证靠静态检查+纯函数单测(语法 `new Function`、blob 解码回环、`cardHtml/packPages/compText` 等单测)。
+8. **安全**:GitHub PAT 用完即弃,勿写进文件/git 配置;origin URL 保持不含 token。
 
 ## 十、怎么用 / 怎么改
 
-- **用**:双击 `DND工具合集.html`(或任一入口)。
-- **部署**:改源码 → 按「四」重建 → 三副本同步 → `git add -A && git commit` → push main(代理坑见九,失败走 API 路径)。Netlify+Pages 自动上线。
-- **改法术书逻辑**:`法术书生成/js/app.js`;数据 `data/spells.js`;样式 `css/styles.css`。改完**必须重建合集**。
-- **改冒险者指南**:直接改 `DND2024冒险者创建指南.html`(自包含)。改完**必须重建合集**。
-- **改物品卡**:`魔法物品卡/` 下改(它不进合集,独立部署;如需上线要单独处理)。
-- **用户输入一律过 `esc()`** 再进 innerHTML(防 XSS 回归)。
+- **用**:双击 `DND工具合集.html`(或线上地址),入口页选工具。
+- **改人物卡**:直接改 `DND2024冒险者创建指南.html`,然后 `node build.js`。
+- **改法术卡**:`法术书生成/js/app.js`(逻辑)、`data/spells.js`(数据)、`css/styles.css`(样式),然后 `node build.js`。
+- **改物品卡**:`魔法物品卡/` 下对应文件,然后 `node build.js`。
+- **改合集本身**(选择页/菜单按钮/文档面板):改 `build.js` 里的模板,重新构建。
+- **改文档**:改 `AI背景说明.md`,重新构建(文档会嵌进合集)。
+- **部署**:改源码 → `node build.js` → `git add -A && git commit` → push `main`(代理坑见九,失败走 API)→ Netlify+Pages 自动上线。
+- **用户输入一律过 `esc()`** 再进 innerHTML。
 
 ## 十一、一句话总结
 
-四套 D&D 2024 中文静态工具站(法术卡/物品卡/角色卡/合集),数据源自 5echm,纯前端、打印 PDF、奇幻主题;合集是 base64 双 iframe 的自包含部署产物,**改源码后必须重建并同步三个入口文件**;push main 到 `MiyamizuRiya/dnd2024-character-creator` 即自动部署 Netlify 主站(Publish 目录=仓库根!)+ GitHub Pages 镜像;开发机无 shell、git 代理坑多,Node 直调是万能解。
+三套 D&D 2024 中文静态工具站(人物卡/法术卡/物品卡)+ 一个三合一自包含合集(入口选择页+菜单切换,文档内嵌);合集由 `node build.js` 从源码构建(改源码必须重建并同步三入口);push `main` 到 `MiyamizuRiya/dnd2024-character-creator` 即自动部署 Netlify 主站(Publish 目录=仓库根!)+ GitHub Pages;原开发机无 shell、git 代理坑多,Node 直调是万能解。

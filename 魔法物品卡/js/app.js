@@ -295,6 +295,7 @@
   }
 
   function init() {
+    if (window.parent !== window) document.documentElement.classList.add("embedded");
     if (!ITEMS.length) { document.body.innerHTML = '<p style="padding:24px">未能加载物品数据（data/items.js）。</p>'; return; }
     initFilters(); setPageSize("A4"); wire(); renderList(); renderPreview(); renderSummary();
   }

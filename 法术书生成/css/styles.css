@@ -83,8 +83,8 @@ html, body {
   border: 1px solid rgba(201,162,39,.45);
 }
 .actions { display: flex; gap: 8px; flex: 0 0 auto; }
-/* 内嵌于合集时为右上角切换按钮留出空间（A1） */
-html.embedded .topbar { padding-right: 190px; }
+/* 内嵌于合集时为右上角「选择工具」按钮留出空间（A1） */
+html.embedded .topbar { padding-right: 130px; }
 @media (max-width: 720px) { html.embedded .topbar { padding-right: 0; } }
 .char-name { flex: 0 0 auto; }
 .char-name input {
