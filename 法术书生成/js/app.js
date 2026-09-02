@@ -23,6 +23,8 @@
     openDetails: new Set(),// 展开详情的 id
     pageSize: "A4",
     zoom: 100,
+    fontScale: 1,          // 卡片字号缩放（A⁻/A⁺）
+    slotHints: {},         // id → {page,row,col} 用户手动指定槽位；无提示的卡按顺序自动装箱
     scrollMode: false,     // 法术卷轴模式：卡片隐藏升环施法、显示可施放职业
     _dragId: null,         // 当前拖拽的法术 id
     _pageCount: 0,         // 实际分页页数（由 renderPreview 计算）
@@ -33,7 +35,7 @@
   const esc = (s) => String(s == null ? "" : s)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
-  const compText = (c) => { if (!c) return ""; let s = c.raw || ""; if (c.material && c.materials) s += "（" + c.materials + "）"; return s; };
+  const compText = (c) => { if (!c) return ""; let s = c.raw || ""; if (c.material && c.materials && !s.includes(c.materials)) s += "（" + c.materials + "）"; return s; };
   const classesStr = (s) => (s.classes || []).join(" · ");
 
   // ---------- 初始化下拉 ----------
@@ -244,33 +246,44 @@
     }
     return sizes;
   }
-  // 把卡片(1格/2格)装进 2列×3行 的页，大型卡占同列连续2行；放不下则换页
-  function packPages(order, sizes) {
+  // 把卡片(1格/2格/3格)装进 2列×3行 的页。slotHints 指定的卡先就位(用户手动放到该格),
+  // 其余按选择顺序自动装箱(页码只前进不回填);返回每页 {items, grid},grid 供空槽渲染与拖放判定
+  function packPages(order, sizes, hints) {
     const pages = [];
-    let grid = [[null, null], [null, null], [null, null]];
-    let items = [];
-    const place = (id, row, col, span) => { items.push({ id, row, col, span }); for (let r = row; r < row + span; r++) grid[r][col] = id; };
+    const gridAt = p => { while (pages.length <= p) pages.push({ items: [], grid: [[null, null], [null, null], [null, null]] }); return pages[p]; };
+    const fits = (p, row, col, span, skip) => {
+      if (row + span > 3) return false;
+      const pg = pages[p]; if (!pg) return true;
+      for (let r = row; r < row + span; r++) { const occ = pg.grid[r][col]; if (occ && occ !== skip) return false; }
+      return true;
+    };
+    const place = (id, row, col, span, page) => { const pg = gridAt(page); pg.items.push({ id, row, col, span }); for (let r = row; r < row + span; r++) pg.grid[r][col] = id; };
+    const placed = new Set();
+    // 1) 手动槽位先就位(放不下则回退自动)
     for (const id of order) {
+      const h = hints && hints[id]; if (!h) continue;
       const size = sizes[id] || 1;
-      let placed = false;
-      if (size === 3) {
-        for (let c = 0; c < 2 && !placed; c++)
-          if (!grid[0][c] && !grid[1][c] && !grid[2][c]) { place(id, 0, c, 3); placed = true; }
-      } else if (size === 2) {
-        for (let r = 0; r <= 1 && !placed; r++)
-          for (let c = 0; c < 2 && !placed; c++)
-            if (!grid[r][c] && !grid[r + 1][c]) { place(id, r, c, 2); placed = true; }
-      } else {
-        for (let r = 0; r < 3 && !placed; r++)
-          for (let c = 0; c < 2 && !placed; c++)
-            if (!grid[r][c]) { place(id, r, c, 1); placed = true; }
-      }
-      if (!placed) {
-        pages.push({ items }); items = []; grid = [[null, null], [null, null], [null, null]];
-        if (size === 3) place(id, 0, 0, 3); else if (size === 2) place(id, 0, 0, 2); else place(id, 0, 0, 1);
-      }
+      if (fits(h.page, h.row, h.col, size, id)) { place(id, h.row, h.col, size, h.page); placed.add(id); }
     }
-    if (items.length) pages.push({ items });
+    // 2) 其余顺序装箱
+    let cur = 0;
+    for (const id of order) {
+      if (placed.has(id)) continue;
+      const size = sizes[id] || 1;
+      let done = false, guard = 0;
+      while (!done && guard++ < 500) {
+        const pg = gridAt(cur);
+        if (size === 3) {
+          for (let c = 0; c < 2 && !done; c++) if (fits(cur, 0, c, 3, id)) { place(id, 0, c, 3, cur); done = true; }
+        } else if (size === 2) {
+          for (let r = 0; r <= 1 && !done; r++) for (let c = 0; c < 2 && !done; c++) if (fits(cur, r, c, 2, id)) { place(id, r, c, 2, cur); done = true; }
+        } else {
+          for (let r = 0; r < 3 && !done; r++) for (let c = 0; c < 2 && !done; c++) if (fits(cur, r, c, 1, id)) { place(id, r, c, 1, cur); done = true; }
+        }
+        if (!done) cur++;
+      }
+      placed.add(id);
+    }
     return pages;
   }
 
@@ -280,14 +293,16 @@
     $("#selCount").textContent = sel.length;
     if (!sel.length) {
       state._pageCount = 0;
+      state._layout = null;
       $("#pageCount").textContent = "0";
       pages.innerHTML = `<div class="empty-state" id="emptyState"><div class="empty-illus">🃏</div><p>尚未选择任何法术。</p><p class="muted">在左侧勾选法术，即可在此处排版为可打印的卡片。</p></div>`;
       applyZoom();
       return;
     }
     const sizes = computeSizes(state.selOrder);
-    const packed = packPages(state.selOrder, sizes);
+    const packed = packPages(state.selOrder, sizes, state.slotHints);
     state._pageCount = packed.length;
+    state._layout = { grids: packed.map(p => p.grid), sizes };
     $("#pageCount").textContent = String(packed.length);
     pages.innerHTML = packed.map((page, i) => {
       const cards = page.items.map(it => {
@@ -295,7 +310,12 @@
         const gridStyle = `grid-column:${it.col + 1}; grid-row:${it.row + 1} / span ${it.span};`;
         return cardHtml(s, gridStyle);
       }).join("");
-      return `<div class="page-wrap"><div class="page-label">第 ${i + 1} 页 / 共 ${packed.length} 页</div><div class="page">${cards}</div></div>`;
+      // 空格渲染为槽位占位(仅拖拽时可见/可投)
+      const slots = [];
+      for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++) {
+        if (!page.grid[r][c]) slots.push(`<div class="cell-slot" data-page="${i}" data-row="${r}" data-col="${c}" style="grid-column:${c + 1};grid-row:${r + 1};"></div>`);
+      }
+      return `<div class="page-wrap"><div class="page-label">第 ${i + 1} 页 / 共 ${packed.length} 页</div><div class="page">${cards}${slots.join("")}</div></div>`;
     }).join("");
     applyZoom();
   }
@@ -316,7 +336,7 @@
   }
 
   // ---------- 排序 / 置顶 / 拖拽 ----------
-  // 一键排序：按环阶从小到大（同环阶按名称）
+  // 一键排序：按环阶从小到大（同环阶按名称）；清除手动槽位
   function sortSelected() {
     if (!state.selOrder.length) return;
     state.selOrder.sort((a, b) => {
@@ -325,6 +345,7 @@
       if (la !== lb) return la - lb;
       return (sa ? sa.nameZh : "").localeCompare(sb ? sb.nameZh : "", "zh");
     });
+    state.slotHints = {};
     renderPreview(); renderSummary();
   }
   // 置顶：把该法术移到选择列表最前
@@ -341,6 +362,22 @@
     if (idx === -1) arr.push(dragId); else arr.splice(idx, 0, dragId);
     state.selOrder = arr;
     renderPreview(); renderSummary();
+  }
+  // 删除单个已选法术（✕/拖出纸面删除）
+  function removeSpell(id) {
+    if (!state.selSet.has(id)) return;
+    state.selSet.delete(id);
+    state.selOrder = state.selOrder.filter(x => x !== id);
+    delete state.slotHints[id];
+    renderList(); renderPreview(); renderSummary();
+    const s = byId[id];
+    showToast(`已删除法术「${s ? s.nameZh : id}」（剩余 ${state.selOrder.length} 张）`);
+  }
+  // 手动放入指定空槽
+  function setSlotHint(id, page, row, col) {
+    state.slotHints[id] = { page, row, col };
+    renderPreview(); renderSummary();
+    showToast(`已放到第 ${page + 1} 页 第${row + 1}排左起第${col + 1}列`);
   }
 
   // ---------- 导入 / 导出 ----------
@@ -370,6 +407,7 @@
       sourceCount: SPELLS.length,
       count: sel.length,
       spells: sel.map(s => ({ id: s.id, nameZh: s.nameZh, nameEn: s.nameEn, level: s.level, school: s.school })),
+      slots: state.selOrder.map(id => state.slotHints[id] || null), // 手动槽位(与 spells 平行,按序对应)
     };
     const json = JSON.stringify(data, null, 2);
     const list = sel.map((s, i) => `${i + 1}. **${s.nameZh}**｜${s.nameEn}　${LEVEL_LABELS[s.level]}·${s.school}`).join("\n");
@@ -428,6 +466,11 @@ ${json}
         else missing++;
       }
       state.selSet = newSet; state.selOrder = newOrder; state.openDetails = new Set();
+      // 恢复手动槽位(与 spells 数组平行;只保留仍存在的)
+      state.slotHints = {};
+      if (Array.isArray(data.slots)) {
+        newOrder.forEach((id, i) => { const h = data.slots[i]; if (h && typeof h.page === "number") state.slotHints[id] = { page: h.page, row: h.row, col: h.col }; });
+      }
       if (data.character != null) { const cn = $("#charName"); if (cn) cn.value = data.character; }
       renderList(); renderPreview(); renderSummary();
       showToast(`已导入 ${newOrder.length} 个法术${missing ? `，${missing} 个未匹配已跳过` : ""}。`);
@@ -469,7 +512,7 @@ ${json}
     });
   }
 
-  // ---------- 缩放 / 纸张 ----------
+  // ---------- 缩放 / 纸张 / 字号 ----------
   function applyZoom() {
     const pages = $("#pages");
     pages.style.transform = `scale(${state.zoom / 100})`;
@@ -478,6 +521,13 @@ ${json}
   function setPageSize(size) {
     state.pageSize = size;
     $("#pages").setAttribute("data-size", size);
+  }
+  // 卡片字号：写入 --card-fs，离屏测量器同步继承；重新排版（长法术可能因此占 2~3 格）
+  function setFontScale(v) {
+    state.fontScale = Math.min(1.4, Math.max(0.7, Math.round(v * 20) / 20));
+    document.documentElement.style.setProperty("--card-fs", String(state.fontScale));
+    $("#fontLabel").textContent = Math.round(state.fontScale * 100) + "%";
+    renderPreview(); renderSummary();
   }
 
   // ---------- 事件 ----------
@@ -509,7 +559,7 @@ ${json}
     $("#clearBtn").addEventListener("click", () => {
       if (!state.selOrder.length) return;
       if (!confirm("确定清空所有已选法术？")) return;
-      state.selSet.clear(); state.selOrder = [];
+      state.selSet.clear(); state.selOrder = []; state.slotHints = {};
       renderList(); renderPreview(); renderSummary();
     });
     $("#printBtn").addEventListener("click", () => window.print());
@@ -550,8 +600,30 @@ ${json}
       state._dragId = card.dataset.id;
       card.classList.add("dragging");
       try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", card.dataset.id); } catch (_) {}
+      // 槽位模式:标出该卡能放进的空槽(按占格数判定;被拖卡自己占的格视为空)
+      const lay = state._layout;
+      if (lay) {
+        const sz = lay.sizes[state._dragId] || 1;
+        pages.classList.add("slot-mode");
+        pages.querySelectorAll(".cell-slot").forEach(el => {
+          const p = +el.dataset.page, r = +el.dataset.row, c = +el.dataset.col;
+          let ok = r + sz <= 3;
+          if (ok && lay.grids[p]) for (let rr = r; rr < r + sz; rr++) {
+            const occ = lay.grids[p][rr][c];
+            if (occ && occ !== state._dragId) { ok = false; break; }
+          }
+          el.classList.toggle("ok", ok);
+        });
+      }
     });
     pages.addEventListener("dragover", (e) => {
+      const slot = e.target.closest(".cell-slot.ok");
+      if (slot && state._dragId) {
+        e.preventDefault(); e.dataTransfer.dropEffect = "move";
+        pages.querySelectorAll(".cell-slot.hover").forEach(x => { if (x !== slot) x.classList.remove("hover"); });
+        slot.classList.add("hover");
+        return;
+      }
       const card = e.target.closest('.card[data-id]');
       if (!card || !state._dragId) return;
       e.preventDefault();
@@ -560,17 +632,57 @@ ${json}
       card.classList.add("drop-target");
     });
     pages.addEventListener("drop", (e) => {
+      pages.classList.remove("slot-mode"); // 重渲染会使 dragend 失效,投放时立即退出槽位模式
+      const slot = e.target.closest(".cell-slot.ok");
+      if (slot && state._dragId) {
+        e.preventDefault();
+        setSlotHint(state._dragId, +slot.dataset.page, +slot.dataset.row, +slot.dataset.col);
+        state._dragId = null;
+        return;
+      }
       const card = e.target.closest('.card[data-id]');
       if (!card || !state._dragId) return;
       e.preventDefault();
       const targetId = card.dataset.id;
-      if (targetId && targetId !== state._dragId) reorder(state._dragId, targetId);
+      if (targetId && targetId !== state._dragId) { delete state.slotHints[state._dragId]; reorder(state._dragId, targetId); }
       state._dragId = null;
     });
     pages.addEventListener("dragend", () => {
-      pages.querySelectorAll(".dragging,.drop-target").forEach(c => c.classList.remove("dragging", "drop-target"));
+      pages.querySelectorAll(".dragging,.drop-target").forEach(c => { c.classList.remove("dragging", "drop-target"); });
+      pages.classList.remove("slot-mode");
+      pages.querySelectorAll(".cell-slot.ok,.cell-slot.hover").forEach(c => { c.classList.remove("ok", "hover"); });
       state._dragId = null;
+      dragHintEl().classList.remove("show");
     });
+
+    // 拖到纸面（.page）之外——页面周围的深色桌面/预览区外——松开 = 删除该法术卡（光标旁小暗牌提示）
+    const inPage = t => !!(t && t.closest && t.closest(".page"));
+    const dragHintEl = () => {
+      let h = document.getElementById("dragDeleteHint");
+      if (!h) { h = document.createElement("div"); h.id = "dragDeleteHint"; h.textContent = "🗑 松开删除"; document.body.appendChild(h); }
+      return h;
+    };
+    document.addEventListener("dragover", e => {
+      if (!state._dragId) return;
+      e.preventDefault();
+      const h = dragHintEl();
+      if (inPage(e.target)) h.classList.remove("show");
+      else { h.classList.add("show"); h.style.left = (e.clientX + 16) + "px"; h.style.top = (e.clientY + 16) + "px"; }
+    });
+    document.addEventListener("drop", e => {
+      if (!state._dragId) return;
+      dragHintEl().classList.remove("show");
+      if (!inPage(e.target)) {
+        e.preventDefault();
+        const id = state._dragId; state._dragId = null;
+        removeSpell(id);
+      }
+    });
+    document.addEventListener("dragend", () => { dragHintEl().classList.remove("show"); });
+
+    // 卡片字号 A⁻/A⁺
+    $("#fontUp").addEventListener("click", () => setFontScale(state.fontScale + 0.05));
+    $("#fontDown").addEventListener("click", () => setFontScale(state.fontScale - 0.05));
 
     // 拼音库就绪后：预建缓存；若已有搜索词则按声音近似重排
     window.addEventListener("pinyin-ready", () => { buildPinyinCache(); if (state.filters.q.trim()) renderList(); });

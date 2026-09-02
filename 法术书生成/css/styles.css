@@ -256,7 +256,8 @@ html.embedded .topbar { padding-right: 130px; }
 .zoom-label { font-size: 12px; color: var(--ink-soft); min-width: 38px; text-align: center; }
 
 .preview-scroll { flex: 1 1 auto; overflow: auto; padding: 26px 0; }
-#pages { display: flex; flex-direction: column; align-items: center; gap: 24px; transform-origin: top center; }
+/* 双页并排:一次预览两张纸(打印样式覆盖回单列) */
+#pages { display: grid; grid-template-columns: repeat(2, max-content); justify-content: center; align-items: start; column-gap: 26px; row-gap: 24px; transform-origin: top center; }
 
 .page-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .page-label { font-size: 11px; color: var(--ink-soft); font-family: var(--serif); }
@@ -272,24 +273,30 @@ html.embedded .topbar { padding-right: 130px; }
 #pages { --page-w: 189mm; --page-h: 276mm; --gap: 5mm; }
 #pages[data-size="Letter"] { --page-w: 194.9mm; --page-h: 258mm; }
 .page { width: var(--page-w); height: var(--page-h); gap: var(--gap); }
+/* 空槽位:平时不显示,拖动卡片时可见;ok=该卡能放进,hover=悬停中 */
+.cell-slot { display: none; border: 1.5px dashed var(--line-strong); border-radius: 4px; background: rgba(201,162,39,.05); }
+#pages.slot-mode .cell-slot { display: flex; opacity: .5; }
+#pages.slot-mode .cell-slot.ok { opacity: 1; border: 2px dashed var(--gold-dk); background: rgba(201,162,39,.14); box-shadow: inset 0 0 0 2px var(--gold-soft); }
+#pages.slot-mode .cell-slot.ok::after { content: "＋"; display: flex; align-items: center; justify-content: center; width: 100%; font-size: 22px; font-weight: 700; color: var(--gold-dk); }
+#pages.slot-mode .cell-slot.ok.hover { background: var(--gold-soft); box-shadow: inset 0 0 0 3px var(--gold); }
 
 .empty-state { text-align: center; color: var(--ink-soft); padding: 80px 20px; }
 .empty-illus { font-size: 48px; opacity: .5; }
 .empty-state .muted { font-size: 12px; opacity: .7; }
 
-/* ---------- 卡片（羊皮纸） ---------- */
+/* ---------- 卡片（羊皮纸，字号随 --card-fs 缩放，由工具条 A⁻/A⁺ 控制） ---------- */
 .card {
   position: relative;
   border: 1.4px solid #6b4a1f; border-radius: 4px;
   padding: 4mm 4.5mm; overflow: hidden;
   display: flex; flex-direction: column; gap: 1.5mm;
   background: #fdf8ea; color: var(--ink);
-  font-size: 8.6pt; line-height: 1.34;
+  font-size: calc(8.6pt * var(--card-fs,1)); line-height: 1.34;
 }
 .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; border-bottom: 1.5px solid #8a5a2a; padding-bottom: 1.5mm; }
-.card-name { font-size: 11.6pt; font-weight: 700; font-family: var(--serif); color: #1f130a; }
-.card-name .en { font-size: 8.6pt; color: #6b4a1f; font-weight: 500; margin-left: 3px; font-family: Georgia, serif; }
-.card-tag { font-size: 7.6pt; font-weight: 600; color: #fff; padding: 0 5px; border-radius: 3px; white-space: nowrap; align-self: center; }
+.card-name { font-size: calc(11.6pt * var(--card-fs,1)); font-weight: 700; font-family: var(--serif); color: #1f130a; }
+.card-name .en { font-size: calc(8.6pt * var(--card-fs,1)); color: #6b4a1f; font-weight: 500; margin-left: 3px; font-family: Georgia, serif; }
+.card-tag { font-size: calc(7.6pt * var(--card-fs,1)); font-weight: 600; color: #fff; padding: 0 5px; border-radius: 3px; white-space: nowrap; align-self: center; }
 .card.l0 .card-tag{background:var(--l0)} .card.l1 .card-tag{background:var(--l1)}
 .card.l2 .card-tag{background:var(--l2)} .card.l3 .card-tag{background:var(--l3)}
 .card.l4 .card-tag{background:var(--l4)} .card.l5 .card-tag{background:var(--l5)}
@@ -298,20 +305,20 @@ html.embedded .topbar { padding-right: 130px; }
 
 .card-meta { display: grid; grid-template-columns: 1fr 1fr; gap: .8mm 3mm; margin: 0; }
 .card-meta > div { display: flex; gap: 3px; align-items: baseline; }
-.card-meta dt { font-weight: 700; color: #6b4a1f; font-size: 7.6pt; white-space: nowrap; margin: 0; }
-.card-meta dd { margin: 0; font-size: 8pt; color: #2a1d12; }
+.card-meta dt { font-weight: 700; color: #6b4a1f; font-size: calc(7.6pt * var(--card-fs,1)); white-space: nowrap; margin: 0; }
+.card-meta dd { margin: 0; font-size: calc(8pt * var(--card-fs,1)); color: #2a1d12; }
 /* 卷轴模式：职业行横跨整行 */
 .card-meta .m-classes { grid-column: 1 / -1; }
 .card-meta .m-classes dd { font-weight: 600; color: #6b4a1f; }
-.dd-tag { font-size: 7pt; padding: 0 4px; border-radius: 8px; color:#fff; margin-left:3px; vertical-align: 1px; }
+.dd-tag { font-size: calc(7pt * var(--card-fs,1)); padding: 0 4px; border-radius: 8px; color:#fff; margin-left:3px; vertical-align: 1px; }
 .dd-tag.c{background:var(--crimson)} .dd-tag.r{background:#3a6ea5}
 
 .card-desc {
   margin: 0; flex: 1 1 auto; overflow: hidden;
-  font-size: 8.2pt; line-height: 1.36; white-space: pre-wrap;
+  font-size: calc(8.2pt * var(--card-fs,1)); line-height: 1.36; white-space: pre-wrap;
   word-break: break-word; color: #2a1d12;
 }
-.card-higher { margin: 0; font-size: 7.9pt; color: #7a4a00; border-top: 1px dotted #c9a057; padding-top: 1mm; }
+.card-higher { margin: 0; font-size: calc(7.9pt * var(--card-fs,1)); color: #7a4a00; border-top: 1px dotted #c9a057; padding-top: 1mm; }
 .card-higher b { color: #9c6b1f; }
 .card.empty { border: 0; background: transparent; }
 /* 拖拽与置顶 */
@@ -319,18 +326,22 @@ html.embedded .topbar { padding-right: 130px; }
 .card[draggable="true"]:active { cursor: grabbing; }
 .card.dragging { opacity: .35; }
 .card.drop-target { box-shadow: inset 0 0 0 2px var(--gold), inset 0 0 0 4px var(--gold-dk); }
+/* 置顶按钮（与魔法物品卡同款 27px 大圆钮） */
 .pin-btn {
-  position: absolute; top: 1.5mm; right: 1.5mm;
-  width: 15px; height: 15px; padding: 0;
-  border: 1px solid #8a5a2a; background: rgba(253,248,234,.92);
+  position: absolute; top: 2mm; right: 2.5mm;
+  width: 27px; height: 27px; padding: 0;
+  border: 1.2px solid #8a5a2a; background: rgba(253,248,234,.95);
   color: #6b4a1f; border-radius: 50%;
-  font-size: 10px; line-height: 1; font-weight: 700;
+  font-size: 14px; line-height: 1; font-weight: 700;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
-  opacity: 0; transition: opacity .12s, background .12s, color .12s;
-  z-index: 3;
+  opacity: 0; transition: opacity .12s, background .12s, color .12s, transform .12s;
+  z-index: 3; box-shadow: 0 1px 3px rgba(60,40,15,.35);
 }
 .card:hover .pin-btn { opacity: 1; }
-.pin-btn:hover { background: var(--gold); color: #2a190d; border-color: var(--gold-dk); }
+.pin-btn:hover { background: var(--gold); color: #2a190d; border-color: var(--gold-dk); transform: scale(1.12); }
+/* 拖到纸面外（深色桌面/预览区外）= 删除：光标旁小暗牌提示「松开删除」 */
+#dragDeleteHint{position:fixed;z-index:95;display:none;pointer-events:none;background:#1f130a;color:#f4e3b0;border:1px solid var(--gold-dk);border-radius:8px;padding:5px 12px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.4);white-space:nowrap;}
+#dragDeleteHint.show{display:block;}
 
 /* ============================================================
    打印
@@ -338,7 +349,7 @@ html.embedded .topbar { padding-right: 130px; }
 @media print {
   html, body { background: #fff; height: auto; }
   #app { display: block; height: auto; overflow: visible; }
-  .topbar, .picker, .preview-toolbar, .empty-state, .page-label, .toast, #__measurer { display: none !important; }
+  .topbar, .picker, .preview-toolbar, .empty-state, .page-label, .toast, #__measurer, .pin-btn, #dragDeleteHint, .cell-slot { display: none !important; }
   .layout { display: block; }
   .preview { display: block; background: #fff; }
   .preview-scroll { display: block; overflow: visible; padding: 0; }

@@ -116,7 +116,8 @@ html.embedded .topbar{padding-right:130px;}
 .paper-size select{padding:3px 4px;font-size:12px;border:1px solid var(--line-strong);border-radius:6px;background:#fffdf5;color:var(--ink);font-family:inherit;}
 .zoom-label{font-size:12px;color:var(--ink-soft);min-width:38px;text-align:center;}
 .preview-scroll{flex:1 1 auto;overflow:auto;padding:26px 0;}
-#pages{display:flex;flex-direction:column;align-items:center;gap:24px;transform-origin:top center;}
+/* 双页并排:一次预览两张纸(打印样式覆盖回单列) */
+#pages{display:grid;grid-template-columns:repeat(2,max-content);justify-content:center;align-items:start;column-gap:26px;row-gap:24px;transform-origin:top center;}
 .page-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;}
 .page-label{font-size:11px;color:var(--ink-soft);font-family:var(--serif);}
 .page{background:#f6efdb;box-shadow:0 2px 8px rgba(60,40,15,.22),0 0 0 1px var(--line-strong);display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:var(--gap,5mm);overflow:hidden;}
@@ -124,44 +125,53 @@ html.embedded .topbar{padding-right:130px;}
 #pages{--page-w:189mm;--page-h:276mm;--gap:5mm;}
 #pages[data-size="Letter"]{--page-w:194.9mm;--page-h:258mm;}
 .page{width:var(--page-w);height:var(--page-h);gap:var(--gap);}
+/* 空槽位:平时不显示,拖动卡片时可见;ok=该卡能放进,hover=悬停中 */
+.cell-slot{display:none;border:1.5px dashed var(--line-strong);border-radius:4px;background:rgba(201,162,39,.05);}
+#pages.slot-mode .cell-slot{display:flex;opacity:.5;}
+#pages.slot-mode .cell-slot.ok{opacity:1;border:2px dashed var(--gold-dk);background:rgba(201,162,39,.14);box-shadow:inset 0 0 0 2px var(--gold-soft);}
+#pages.slot-mode .cell-slot.ok::after{content:"＋";display:flex;align-items:center;justify-content:center;width:100%;font-size:22px;font-weight:700;color:var(--gold-dk);}
+#pages.slot-mode .cell-slot.ok.hover{background:var(--gold-soft);box-shadow:inset 0 0 0 3px var(--gold);}
 .empty-state{text-align:center;color:var(--ink-soft);padding:80px 20px;}
 .empty-illus{font-size:48px;opacity:.5;}
 .empty-state .muted{font-size:12px;opacity:.7;}
 
-/* 物品卡 */
-.card{position:relative;border:1.4px solid #6b4a1f;border-radius:4px;padding:4mm 4.5mm;overflow:hidden;display:flex;flex-direction:column;gap:1.5mm;background:#fdf8ea;color:var(--ink);font-size:8.6pt;line-height:1.34;}
+/* 物品卡（字号随 --card-fs 缩放,由工具条 A⁻/A⁺ 控制） */
+.card{position:relative;border:1.4px solid #6b4a1f;border-radius:4px;padding:4mm 4.5mm;overflow:hidden;display:flex;flex-direction:column;gap:1.5mm;background:#fdf8ea;color:var(--ink);font-size:calc(8.6pt * var(--card-fs,1));line-height:1.34;}
 .card-head{display:flex;align-items:baseline;justify-content:space-between;gap:4px;border-bottom:1.5px solid #8a5a2a;padding-bottom:1.5mm;}
-.card-name{font-size:11.6pt;font-weight:700;font-family:var(--serif);color:#1f130a;}
-.card-name .en{font-size:8.6pt;color:#6b4a1f;font-weight:500;margin-left:3px;font-family:Georgia,serif;}
-.card-tag{font-size:7.8pt;font-weight:600;color:#fff;padding:0 5px;border-radius:3px;white-space:nowrap;align-self:center;background:var(--r-普通);}
+.card-name{font-size:calc(11.6pt * var(--card-fs,1));font-weight:700;font-family:var(--serif);color:#1f130a;}
+.card-name .en{font-size:calc(8.6pt * var(--card-fs,1));color:#6b4a1f;font-weight:500;margin-left:3px;font-family:Georgia,serif;}
+.card-tag{font-size:calc(7.8pt * var(--card-fs,1));font-weight:600;color:#fff;padding:0 5px;border-radius:3px;white-space:nowrap;align-self:center;background:var(--r-普通);}
 .card.r-普通 .card-tag{background:var(--r-普通)} .card.r-非普通 .card-tag{background:var(--r-非普通)}
 .card.r-珍稀 .card-tag{background:var(--r-珍稀)} .card.r-极珍稀 .card-tag{background:var(--r-极珍稀)}
 .card.r-传说 .card-tag{background:var(--r-传说)} .card.r-神器 .card-tag{background:var(--r-神器)}
 .card.r-多种稀有度 .card-tag{background:var(--r-多种稀有度)}
-.card-meta{font-size:8pt;color:#4a3a28;margin:0;font-style:italic;}
+.card-meta{font-size:calc(8pt * var(--card-fs,1));color:#4a3a28;margin:0;font-style:italic;}
 .card-meta .att{font-style:normal;color:var(--crimson);font-weight:600;}
-.card-desc{margin:0;flex:1 1 auto;overflow:hidden;font-size:8.2pt;line-height:1.36;white-space:pre-wrap;word-break:break-word;color:#2a1d12;}
+.card-desc{margin:0;flex:1 1 auto;overflow:hidden;font-size:calc(8.2pt * var(--card-fs,1));line-height:1.36;white-space:pre-wrap;word-break:break-word;color:#2a1d12;}
 .card.empty{border:0;background:transparent;}
 .card[draggable="true"]{cursor:grab;}
 .card[draggable="true"]:active{cursor:grabbing;}
 .card.dragging{opacity:.35;}
 .card.drop-target{box-shadow:inset 0 0 0 2px var(--gold),inset 0 0 0 4px var(--gold-dk);}
-.pin-btn,.edit-btn,.del-btn{position:absolute;top:1.5mm;border:1px solid #8a5a2a;background:rgba(253,248,234,.92);color:#6b4a1f;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s,background .12s,color .12s;z-index:3;font-size:10px;line-height:1;font-weight:700;}
-.pin-btn{right:1.5mm;width:15px;height:15px;padding:0;}
-.edit-btn{right:20px;width:15px;height:15px;padding:0;font-size:11px;}
-.del-btn{right:38px;width:15px;height:15px;padding:0;color:#8b1e2d;border-color:#8b1e2d;}
+/* 卡片悬停操作钮：置顶/编辑/删除（统一加大尺寸，27px 圆钮） */
+.pin-btn,.edit-btn,.del-btn{position:absolute;top:2mm;border:1.2px solid #8a5a2a;background:rgba(253,248,234,.95);color:#6b4a1f;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s,background .12s,color .12s,transform .12s;z-index:3;width:27px;height:27px;padding:0;font-size:14px;line-height:1;font-weight:700;box-shadow:0 1px 3px rgba(60,40,15,.35);}
+.pin-btn{right:2.5mm;}
+.edit-btn{right:calc(2.5mm + 32px);}
+.del-btn{right:calc(2.5mm + 64px);color:#8b1e2d;border-color:#8b1e2d;}
 .card:hover .pin-btn,.card:hover .edit-btn,.card:hover .del-btn{opacity:1;}
-.pin-btn:hover{background:var(--gold);color:#2a190d;border-color:var(--gold-dk);}
-.edit-btn:hover{background:var(--gold);color:#2a190d;border-color:var(--gold-dk);}
-.del-btn:hover{background:var(--crimson);color:#fff;border-color:var(--crimson);}
+.pin-btn:hover,.edit-btn:hover{background:var(--gold);color:#2a190d;border-color:var(--gold-dk);transform:scale(1.12);}
+.del-btn:hover{background:var(--crimson);color:#fff;border-color:var(--crimson);transform:scale(1.12);}
+/* 拖到纸面外（深色桌面/预览区外）= 删除：光标旁小暗牌提示「松开删除」 */
+#dragDeleteHint{position:fixed;z-index:95;display:none;pointer-events:none;background:#1f130a;color:#f4e3b0;border:1px solid var(--gold-dk);border-radius:8px;padding:5px 12px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.4);white-space:nowrap;}
+#dragDeleteHint.show{display:block;}
 .card .card-meta:empty,.card .card-desc:empty{min-height:8pt;}
 /* 卡片：消耗品徽章 + 充能圆圈 */
 .card-tags{display:flex;align-items:center;gap:4px;align-self:center}
-.cons-badge{font-size:6.6pt;font-weight:700;color:#fff;background:var(--crimson);padding:0 5px;border-radius:3px;white-space:nowrap;line-height:1.6}
-.att-tag{font-size:6.6pt;font-weight:700;color:#fff;background:#3a6ea5;padding:0 5px;border-radius:3px;white-space:nowrap;line-height:1.6}
+.cons-badge{font-size:calc(6.6pt * var(--card-fs,1));font-weight:700;color:#fff;background:var(--crimson);padding:0 5px;border-radius:3px;white-space:nowrap;line-height:1.6}
+.att-tag{font-size:calc(6.6pt * var(--card-fs,1));font-weight:700;color:#fff;background:#3a6ea5;padding:0 5px;border-radius:3px;white-space:nowrap;line-height:1.6}
 .charge-circles{display:flex;align-items:center;gap:3.5px;justify-content:flex-end;flex-wrap:wrap;margin-top:1.5mm;min-height:10pt}
 .c-circle{width:13px;height:13px;border:1.4px solid #6b4a1f;border-radius:50%;background:transparent;display:inline-block;flex:0 0 auto}
-.cc-label{font-size:7.5pt;color:#6b4a1f;margin-right:5px;font-weight:600;white-space:nowrap}
+.cc-label{font-size:calc(7.5pt * var(--card-fs,1));color:#6b4a1f;margin-right:5px;font-weight:600;white-space:nowrap}
 /* 左列表：消耗品徽标 + 计数 + 减号 */
 .badge.cons{background:#8b1e2d}
 .cnt-badge{display:inline-block;margin-left:5px;padding:0 6px;border-radius:8px;background:var(--gold);color:#2a190d;font-size:11px;font-weight:700;line-height:1.5}
@@ -172,7 +182,7 @@ html.embedded .topbar{padding-right:130px;}
 @media print{
   html,body{background:#fff;height:auto;}
   #app{display:block;height:auto;overflow:visible;}
-  .topbar,.picker,.preview-toolbar,.empty-state,.page-label,.toast,.pin-btn,.edit-btn,.del-btn,#__measurer{display:none !important;}
+  .topbar,.picker,.preview-toolbar,.empty-state,.page-label,.toast,.pin-btn,.edit-btn,.del-btn,#__measurer,#dragDeleteHint,.cell-slot{display:none !important;}
   .layout{display:block;}
   .preview{display:block;background:#fff;}
   .preview-scroll{display:block;overflow:visible;padding:0;}

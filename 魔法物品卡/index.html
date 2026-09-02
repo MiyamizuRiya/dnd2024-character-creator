@@ -29,7 +29,7 @@
     <section class="picker" aria-label="物品选择">
       <div class="filters">
         <div class="search-row">
-          <input type="search" id="search" class="search" placeholder="搜索物品名（中文 / English）…" autocomplete="off">
+          <input type="search" id="search" class="search" placeholder="搜索物品名（中文 / English / 拼音，支持错字模糊）…" autocomplete="off">
         </div>
         <div class="filter-row">
           <label class="sel"><span>类别</span><select id="catFilter"></select></label>
@@ -85,6 +85,9 @@
         </div>
         <div class="preview-tools">
           <label class="paper-size"><span>纸张</span><select id="pageSize"><option value="A4">A4</option><option value="Letter">Letter</option></select></label>
+          <button type="button" id="fontDown" class="btn btn-ghost btn-sm" title="缩小卡片字号">A⁻</button>
+          <span id="fontLabel" class="zoom-label" title="卡片字号">100%</span>
+          <button type="button" id="fontUp" class="btn btn-ghost btn-sm" title="放大卡片字号">A⁺</button>
           <button type="button" id="zoomOut" class="btn btn-ghost btn-sm">−</button>
           <span id="zoomLabel" class="zoom-label">100%</span>
           <button type="button" id="zoomIn" class="btn btn-ghost btn-sm">＋</button>
@@ -103,6 +106,17 @@
   </main>
 </div>
 
+<script type="module">
+  // 在线时从 CDN 加载拼音库，用于声音近似搜索（与法术书同款）。
+  // 加载失败则静默退化：字符级模糊仍可用。
+  (async () => {
+    try {
+      const mod = await import("https://cdn.jsdelivr.net/npm/pinyin-pro@3/+esm");
+      const p = mod.pinyin || (mod.default && mod.default.pinyin) || mod.default;
+      if (typeof p === "function") { window.__pinyin = p; window.dispatchEvent(new Event("pinyin-ready")); }
+    } catch (e) { /* 离线或被拦截：忽略，使用字符级回退 */ }
+  })();
+</script>
 <script src="data/items.js"></script>
 <script src="js/app.js"></script>
 </body>
