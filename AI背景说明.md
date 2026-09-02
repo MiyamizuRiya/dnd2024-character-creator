@@ -102,7 +102,7 @@ DND工具站源码合集/            ← 本地即 git 仓库(origin=GitHub 上�
 ## 八、修复与功能记录
 
 **2026-09-02**:
-- **推送与上线**(本机无 git):用仓库根的 `_push_api.js`(GitHub Git Data API:blob→tree(base_tree)→commit→PATCH ref;Token 从环境变量 GH_TOKEN 传入,不落盘)推送 main 成功;Netlify 与 GitHub Pages 均已验证含全部新特性。以后本机推送:`powershell` 设 `$env:GH_TOKEN` 后 `node _push_api.js "提交信息"`(该脚本在推送文件白名单内,不会被提交)。
+- **推送与上线**(本机无 git):推荐**双击仓库根的 `push.cmd`**(自动找 node、自动从上层《开发密钥与新电脑指南.md》提取 Token、提示输入提交信息;纯 ASCII 无乱码)。底层 `_push_api.js` 走 GitHub Git Data API(blob→tree(base_tree)→commit→PATCH ref),无改动自动跳过提交;命令行也可 `node _push_api.js "提交信息"`(Token 自动读取,无需环境变量)。⚠️ **不要双击 .js 文件**——Windows 会用老版 JScript 引擎打开,报「Microsoft JScript 编译错误:语法错误」(脚本本身语法正常,Node 22 编译通过)。两个脚本都在推送文件白名单外,不会被提交。首次推送成功后 Netlify 与 GitHub Pages 已验证含全部新特性。
 - 人物卡打印输出修复:@media print 补 `#step-sheet>h2,#step-sheet>.hint,.sheet-actions-top{display:none}`——此前 PDF 里会带出「第六步」标题、提示文字和打印/导出按钮,现在只输出 .sheet 角色卡本体。
 - 法术卡材料重复修复:compText 在 raw 已含材料文(如「V、S、M(一根羽毛)」)时又拼接 materials,致卡片成分行显示两遍;加 `!s.includes(c.materials)` 判断。
 - 人物卡打印输出修复:@media print 补 `#step-sheet>h2,#step-sheet>.hint,.sheet-actions-top{display:none}`——此前 PDF 里会带出「第六步」标题、提示文字和打印/导出按钮,现在只输出 .sheet 角色卡本体。
