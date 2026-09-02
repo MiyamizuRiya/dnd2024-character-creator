@@ -102,6 +102,9 @@ DND工具站源码合集/            ← 本地即 git 仓库(origin=GitHub 上�
 ## 八、修复与功能记录
 
 **2026-09-02**:
+- **推送与上线**(本机无 git):用仓库根的 `_push_api.js`(GitHub Git Data API:blob→tree(base_tree)→commit→PATCH ref;Token 从环境变量 GH_TOKEN 传入,不落盘)推送 main 成功;Netlify 与 GitHub Pages 均已验证含全部新特性。以后本机推送:`powershell` 设 `$env:GH_TOKEN` 后 `node _push_api.js "提交信息"`(该脚本在推送文件白名单内,不会被提交)。
+- 人物卡打印输出修复:@media print 补 `#step-sheet>h2,#step-sheet>.hint,.sheet-actions-top{display:none}`——此前 PDF 里会带出「第六步」标题、提示文字和打印/导出按钮,现在只输出 .sheet 角色卡本体。
+- 法术卡材料重复修复:compText 在 raw 已含材料文(如「V、S、M(一根羽毛)」)时又拼接 materials,致卡片成分行显示两遍;加 `!s.includes(c.materials)` 判断。
 - 人物卡打印输出修复:@media print 补 `#step-sheet>h2,#step-sheet>.hint,.sheet-actions-top{display:none}`——此前 PDF 里会带出「第六步」标题、提示文字和打印/导出按钮,现在只输出 .sheet 角色卡本体。
 - 法术卡材料重复修复:compText 在 raw 已含材料文(如「V、S、M(一根羽毛)」)时又拼接 materials,致卡片成分行显示两遍;加 `!s.includes(c.materials)` 判断。
 
