@@ -36,7 +36,9 @@
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
   const compText = (c) => { if (!c) return ""; let s = c.raw || ""; if (c.material && c.materials && !s.includes(c.materials)) s += "（" + c.materials + "）"; return s; };
-  const classesStr = (s) => (s.classes || []).join(" · ");
+  // 人物卡已实现的 12 职业;数据中含"奇械师"等未实现职业标记,展示/筛选时剔除避免误导
+  const KNOWN_CLASSES = new Set(["野蛮人", "吟游诗人", "牧师", "德鲁伊", "战士", "武僧", "圣武士", "游侠", "游荡者", "术士", "魔契师", "法师"]);
+  const classesStr = (s) => (s.classes || []).filter(c => KNOWN_CLASSES.has(c)).join(" · ");
 
   // ---------- 初始化下拉 ----------
   function initFilters() {
@@ -47,7 +49,7 @@
     schoolSel.innerHTML = `<option value="all">全部学派</option>` +
       SCHOOLS.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join("");
     const classSel = $("#classFilter");
-    const allClasses = Array.from(new Set(SPELLS.flatMap(s => s.classes || []))).sort((a, b) => a.localeCompare(b, "zh"));
+    const allClasses = Array.from(new Set(SPELLS.flatMap(s => (s.classes || []).filter(c => KNOWN_CLASSES.has(c))))).sort((a, b) => a.localeCompare(b, "zh"));
     classSel.innerHTML = `<option value="all">全部职业</option>` +
       allClasses.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
   }
@@ -202,7 +204,7 @@
     const ritTag = s.ritual ? '<span class="dd-tag r">仪式</span>' : "";
     const concTag = s.concentration ? '<span class="dd-tag c">专注</span>' : "";
     const styleAttr = gridStyle ? ` style="${gridStyle}"` : "";
-    return `<article class="card l${s.level}" data-id="${esc(s.id)}" draggable="true"${styleAttr}>
+    return `<article class="card l${s.level}${(state._overflow && state._overflow.has(s.id)) ? " overflowing" : ""}" data-id="${esc(s.id)}" draggable="true"${styleAttr}>
       <button class="pin-btn" type="button" data-id="${esc(s.id)}" draggable="false" title="置顶该法术" aria-label="置顶该法术">↑</button>
       <div class="card-head">
         <div class="card-name">${esc(s.nameZh)} <span class="en">${esc(s.nameEn)}</span></div>
@@ -229,13 +231,14 @@
     const d = PAGE_DIMS[state.pageSize] || PAGE_DIMS.A4;
     return { w: ((d.w - GAP_MM) / 2) * PX_PER_MM, h: ((d.h - 2 * GAP_MM) / 3) * PX_PER_MM };
   }
-  // 用离屏卡片量取自然高度，超出一格 → 标记为大型(size=2)
+  // 用离屏卡片量取自然高度，超出一格 → 标记为大型(size=2);超三格仍放不下 → 记入溢出集,卡片标角标
   function computeSizes(order) {
     const { w, h } = getCellDims();
     let m = document.getElementById("__measurer");
     if (!m) { m = document.createElement("div"); m.id = "__measurer"; m.style.cssText = "position:absolute;left:-99999px;top:0;visibility:hidden;pointer-events:none;"; document.body.appendChild(m); }
     m.style.width = w + "px";
-    const sizes = {};
+    const sizes = {}; const overflow = new Set();
+    const gapPx = GAP_MM * PX_PER_MM;
     for (const id of order) {
       const s = byId[id];
       if (!s) { sizes[id] = 1; continue; }
@@ -243,7 +246,9 @@
       const art = m.querySelector("article");
       const nat = art ? art.offsetHeight : 0;
       sizes[id] = (nat > h * 2 + 2) ? 3 : (nat > h + 1) ? 2 : 1;
+      if (nat > 3 * h + 2 * gapPx + 2) overflow.add(id);
     }
+    state._overflow = overflow;
     return sizes;
   }
   // 把卡片(1格/2格/3格)装进 2列×3行 的页。slotHints 指定的卡先就位(用户手动放到该格),
@@ -304,6 +309,7 @@
     state._pageCount = packed.length;
     state._layout = { grids: packed.map(p => p.grid), sizes };
     $("#pageCount").textContent = String(packed.length);
+    const charName = ($("#charName").value || "").trim();
     pages.innerHTML = packed.map((page, i) => {
       const cards = page.items.map(it => {
         const s = byId[it.id]; if (!s) return "";
@@ -315,7 +321,7 @@
       for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++) {
         if (!page.grid[r][c]) slots.push(`<div class="cell-slot" data-page="${i}" data-row="${r}" data-col="${c}" style="grid-column:${c + 1};grid-row:${r + 1};"></div>`);
       }
-      return `<div class="page-wrap"><div class="page-label">第 ${i + 1} 页 / 共 ${packed.length} 页</div><div class="page">${cards}${slots.join("")}</div></div>`;
+      return `<div class="page-wrap"><div class="page-label">${charName ? esc(charName) + " · " : ""}第 ${i + 1} 页 / 共 ${packed.length} 页</div><div class="page">${cards}${slots.join("")}</div></div>`;
     }).join("");
     applyZoom();
   }
@@ -684,8 +690,9 @@ ${json}
     $("#fontUp").addEventListener("click", () => setFontScale(state.fontScale + 0.05));
     $("#fontDown").addEventListener("click", () => setFontScale(state.fontScale - 0.05));
 
-    // 拼音库就绪后：预建缓存；若已有搜索词则按声音近似重排
+    // 拼音库就绪后：预建缓存；若已有搜索词则按声音近似重排;失败则提示已退化为字符级模糊
     window.addEventListener("pinyin-ready", () => { buildPinyinCache(); if (state.filters.q.trim()) renderList(); });
+    window.addEventListener("pinyin-failed", () => showToast("拼音搜索不可用(离线或网络受限),已退化为字符模糊匹配"));
   }
 
   // ---------- A2: 接收角色卡同步的天赋法术 ----------

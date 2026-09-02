@@ -103,13 +103,14 @@
 
 <script type="module">
   // 在线时从 CDN 加载拼音库，用于声音近似搜索（如 摩登肯→魔邓肯）。
-  // 加载失败则静默退化：字符级模糊仍可用（匕首云、狂笑塔莎 等不受影响）。
+  // 加载失败则退化到字符级模糊，并派发事件提示用户。
   (async () => {
     try {
       const mod = await import("https://cdn.jsdelivr.net/npm/pinyin-pro@3/+esm");
       const p = mod.pinyin || (mod.default && mod.default.pinyin) || mod.default;
       if (typeof p === "function") { window.__pinyin = p; window.dispatchEvent(new Event("pinyin-ready")); }
-    } catch (e) { /* 离线或被拦截：忽略，使用字符级回退 */ }
+      else throw new Error("bad module");
+    } catch (e) { window.dispatchEvent(new Event("pinyin-failed")); }
   })();
 </script>
 <script src="data/spells.js"></script>

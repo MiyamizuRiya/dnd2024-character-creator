@@ -101,6 +101,19 @@ DND工具站源码合集/            ← 本地即 git 仓库(origin=GitHub 上�
 
 ## 八、修复与功能记录
 
+**2026-09-03**·问题清单修复批次(对照 `代码问题清单.md`):
+- **P1-1/P1-1 兼职等级分配**:`setMainLevels` 拒绝兼职总级 <1 的分配;`renderProgress` 主职业下拉上限改为 `总级-兼职数`(每项兼职至少 1 级);多项兼职按比例取整后余量并入最大份额项,求和严格等于差额(修 C23/C24)。
+- **P1-3 子职施法提示**:`renderLevelInfo` 对战士/游荡者显示「3级选奥法骑士/诡术师后可施法」,已选该子职且≥3级时按 1/3 施法者(等效=floor(级/3))显示最高环阶(修 C25)。
+- **P2-5 战技描述**:20 个战技(MANEUVERS)描述从 5echm 战斗大师页抓取注入(≤160 字截断,`_maneuvers_raw.json`+`_fill_maneuvers.js` 可重跑);战技详情弹窗改用真实描述(修 C30)。
+- **P2-3 法师书内/准备数**:`renderSpellUI` 对法师显示「抄录 N 个入法术书;当前可准备 X 个(智力调整值+法师等级)」(修 C14)。
+- **P3-1 奇械师过滤**:法术书职业下拉与卷轴模式卡片职业行过滤为 12 已实现职业,数据中「奇械师」不再出现(修 C28)。
+- **P4-1 超长描述角标**:两卡 computeSizes 检测超三格仍放不下的卡,加 `overflowing` 类 → 左下角红标「⚠ 描述过长」提示打印可能截断(缓解 B2)。
+- **P4-2/P4-3 打印页码与角色名**:两卡 `@media print` 改为**保留** page-label(小字居中);法术书页标含角色名(「角色名 · 第 X/Y 页」)(修 B4/B5)。
+- **P4-4 物品卡换行**:cardHtml 去掉 `\n→<br>` 替换(CSS 已有 pre-wrap,原实现会双倍换行)。
+- **P6-1 拼音退化提示**:两卡入口 module 加载失败派发 `pinyin-failed`,app 监听 toast「拼音搜索不可用…」(修 B3)。
+- **P7-1 转义统一**:人物卡 showSubclassDetail/showFeatDetailByName/showFightingStyleDetail/showMetamagicDetail/showManeuverDetail 全部 `esc()`;renderSpellList 显示文本 esc()、onclick 字符串改「JS 转义+属性转义」双保险(加固 C20)。
+- 未修项与理由见 `代码问题清单.md` 顶部修复批次注记。
+
 **2026-09-02**:
 - **推送与上线**(本机无 git):推荐**双击仓库根的 `push.cmd`**(自动找 node、自动从上层《开发密钥与新电脑指南.md》提取 Token、提示输入提交信息;纯 ASCII 无乱码)。底层 `_push_api.js` 走 GitHub Git Data API(blob→tree(base_tree)→commit→PATCH ref),无改动自动跳过提交;命令行也可 `node _push_api.js "提交信息"`(Token 自动读取,无需环境变量)。⚠️ **不要双击 .js 文件**——Windows 会用老版 JScript 引擎打开,报「Microsoft JScript 编译错误:语法错误」(脚本本身语法正常,Node 22 编译通过)。两个脚本都在推送文件白名单外,不会被提交。首次推送成功后 Netlify 与 GitHub Pages 已验证含全部新特性。
 - 人物卡打印输出修复:@media print 补 `#step-sheet>h2,#step-sheet>.hint,.sheet-actions-top{display:none}`——此前 PDF 里会带出「第六步」标题、提示文字和打印/导出按钮,现在只输出 .sheet 角色卡本体。

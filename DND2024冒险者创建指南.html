@@ -574,13 +574,7 @@ const METAMAGIC_OPTIONS=[
 {n:"转化法术",cost:"1术法点",d:"将法术伤害类型转换为另一种"},
 {n:"孪生法术",cost:"1术法点",d:"能因升环增加目标的法术,有效环阶提升一环"}
 ];
-const MANEUVERS=[
-{n:"伏击",d:""},{n:"换位诈术",d:""},{n:"指挥官奇袭",d:""},{n:"领导风范",d:""},
-{n:"缴械攻击",d:""},{n:"扰乱打击",d:""},{n:"灵巧步法",d:""},{n:"诡诈攻击",d:""},
-{n:"挑衅攻击",d:""},{n:"突刺攻击",d:""},{n:"灵动攻击",d:""},{n:"恐吓攻击",d:""},
-{n:"格挡",d:""},{n:"精准攻击",d:""},{n:"推撞攻击",d:""},{n:"重整旗鼓",d:""},
-{n:"反击",d:""},{n:"横扫攻击",d:""},{n:"战术预估",d:""},{n:"摔绊攻击",d:""}
-];
+const MANEUVERS=[{n:"伏击",d:"若你不处于失能状态，当你进行一次敏捷（隐匿）检定或先攻检定时，你能够消耗一枚卓越骰，并将消耗的卓越骰加入检定中。"},{n:"换位诈术",d:"你的回合中，若你处于某个生物5尺范围内，你可够消耗一枚卓越骰和至少5尺的移动力，来与那个生物互换位置。该生物需要自愿且不处于失能状态。这次移动不会引发借机攻击。 投掷那枚被消耗的卓越骰。直到你的下个回合开始前，你或被互换位置的另一生物（由你选择）的AC获得等于该卓越骰结果的加值。"},{n:"指挥官奇袭",d:"你在自己回合内执行攻击动作时，你可以替换掉一次你的攻击变为指挥一名伙伴发动奇袭。使用此战技时，你消耗一枚卓越骰，并指定一名能看见你或能听到你声音的伙伴。所选生物可以立即使用其反应发动一次武器攻击或徒手打击，若命中，将消耗的卓越骰加在此次攻击的伤害掷骰中。"},{n:"领导风范",d:"当你进行一次魅力（威吓、表演或游说）检定时，你能够消耗一枚卓越骰，将消耗的卓越骰加入此次属性检定中。"},{n:"缴械攻击",d:"你以攻击检定命中一个生物时，可消耗一枚卓越骰以尝试缴械目标。将消耗的卓越骰加在此次攻击的伤害掷骰中。目标必须通过一次力量豁免，豁免失败则其丢弃手中持握的一件物品（由你选择）。被丢弃的物品将掉落在该生物处于的空间中。"},{n:"扰乱打击",d:"你以攻击检定命中一个生物时，可以消耗一枚卓越骰以扰乱该目标，让你的盟友有机可乘。将消耗的卓越骰加在此次攻击的伤害掷骰中。此后直到你下个回合开始前，下一次由除你之外的生物对目标进行的攻击检定具有优势。"},{n:"灵巧步法",d:"以一个附赠动作，你可以消耗一枚卓越骰并执行撤离动作，并将卓越骰结果加入你的AC中，直到你下回合开始为止。"},{n:"诡诈攻击",d:"以一个附赠动作，你可以消耗一枚卓越骰并指定一个位于你5尺范围内的生物为目标，对其虚晃一招。你在本回合内对该生物发动的下一次攻击检定具有优势。如果该攻击命中，则将消耗的卓越骰加在此次攻击的伤害掷骰中。"},{n:"挑衅攻击",d:"你以攻击检定命中一个生物时，可以消耗一枚卓越骰以尝试挑衅该目标攻击你。所消耗的卓越骰还会被加到此次攻击的伤害掷骰中。目标必须通过一次感知豁免，豁免失败者对除你之外的生物进行的攻击检定具有劣势，直到你的下个回合结束。"},{n:"突刺攻击",d:"以一个附赠动作，你可以消耗一枚卓越骰并执行疾走动作。若你在本回合中直线移动至少5尺后立即以攻击动作中的一次近战攻击命中，你可以将消耗的卓越骰加在此次攻击的伤害掷骰中。"},{n:"灵动攻击",d:"你以攻击检定命中一个生物时，可以消耗一枚卓越骰以让战友移动到更有利的位置。将所消耗的卓越骰加在此次攻击的伤害掷骰中，并指定一个能看见你或听到你声音的自愿生物。该生物可以用其反应移动至多等于其速度一半的距离。本次移动不会引发本次所攻击目标的借机攻击。"},{n:"恐吓攻击",d:"你以攻击检定命中一个生物时，可消耗一枚卓越骰以尝试恐吓该目标。所消耗的卓越骰还会被加到此次攻击的伤害掷骰中。目标必须通过一次感知豁免，豁免失败则陷入恐慌状态，直到你下个回合结束为止。"},{n:"格挡",d:"其他生物以一次近战攻击检定对你造成伤害时，你可以执行反应消耗一枚卓越骰以减少伤害。减少的数值为卓越骰骰值＋你的力量或敏捷调整值（由你选择）。"},{n:"精准攻击",d:"当你的一次攻击检定失手时，可以消耗一枚卓越骰并将其结果加在本次攻击的攻击检定中，这可能会导致其命中。"},{n:"推撞攻击",d:"你以武器攻击或徒手打击发动的攻击检定命中一个生物时，可以消耗一枚卓越骰以尝试将该目标推开。所消耗的卓越骰还会被加到此次攻击的伤害掷骰中。如果该目标体型为大型或更小，则必须通过一次力量豁免，豁免失败将被往远离你的方向直线推动至多15尺。"},{n:"重整旗鼓",d:"以一个附赠动作，你可以消耗一枚卓越骰以鼓舞一名战友的士气。选择一名位于你30尺内的能看见你或听到你的盟友。该生物获得数量等于你战士等级的一半（向下取整）加卓越骰结果的临时生命值。"},{n:"反击",d:"当一个生物对你发动了一次近战攻击检定但失手时，你可以执行一个反应并消耗一枚卓越骰使用武器或徒手打击对其发动一次近战攻击检定。如果该攻击命中，则将卓越骰加在此攻击的伤害掷骰中。"},{n:"横扫攻击",d:"你以武器或徒手打击发动的近战攻击检定命中一个生物时，可以消耗一枚卓越骰以尝试伤害另一个生物。指定一个处于你触及范围内并且距离初始目标不超过5尺的生物，如果你原本的攻击检定足以命中第二个目标，则它将受到等同于你卓越骰结果的伤害。此伤害与你原本攻击的伤害类型相同。"},{n:"战术预估",d:"当你进行一次智力（调查或历史）或感知（洞悉）检定时，你能够消耗一枚卓越骰，将消耗的卓越骰加入此次属性检定中。"},{n:"摔绊攻击",d:"你以武器或徒手打击发动的攻击检定命中一个生物时，可以消耗一枚卓越骰并将所消耗的卓越骰加在此次攻击的伤害掷骰中。如果该目标体型为大型或更小，则必须通过一次力量豁免。豁免失败将陷入倒地状态。"}];
 
 function fightingStyleLevels(){
   // 战士1级,圣武士/游侠2级获得战斗风格
@@ -1241,14 +1235,12 @@ function renderProgress(){
       }
       html+='</div>';
     });
-    // 调整主职业等级
+    // 调整主职业等级(上限保证每个兼职至少 1 级)
     html+='<div class="card" style="margin-top:8px"><h3 style="font-size:.95rem">'+c.name+'(主职业)等级</h3>';
     html+='<div class="row"><div><label class="f">主职业等级</label><select onchange="setMainLevels(this.value)">';
-    const mcTotal=S.multiclass.reduce((a,m)=>a+m.levels,0);
-    for(let i=1;i<=lv-mcTotal+1;i++){
-      if(i+mcTotal<=lv){
-        html+='<option value="'+i+'" '+(mainLevels===i?'selected':'')+'>'+i+'级</option>';
-      }
+    const maxMain=lv-S.multiclass.length;
+    for(let i=1;i<=maxMain;i++){
+      html+='<option value="'+i+'" '+(mainLevels===i?'selected':'')+'>'+i+'级</option>';
     }
     html+='</select></div></div></div>';
   }
@@ -1272,18 +1264,20 @@ function setMainLevels(v){
   const mcTotal=S.level-newMain;
   if(mcTotal<0) return;
   if(S.multiclass.length===0) return;
-  // 把差额分配到兼职职业:如果只有一个兼职,直接设;如果有多个,按比例
+  if(mcTotal<S.multiclass.length) return; // 每个兼职至少 1 级,拒绝 0 级兼职
+  // 把差额分配到兼职职业:单个兼职直接设;多个兼职按比例取整,余量并入最大份额项,保证求和严格等于 mcTotal
   if(S.multiclass.length===1){
     S.multiclass[0].levels=mcTotal;
   } else {
-    // 多个兼职:保持比例
     const oldMcTotal=S.multiclass.reduce((a,m)=>a+m.levels,0);
     if(oldMcTotal>0){
-      let remaining=mcTotal;
-      S.multiclass.forEach((mc,idx)=>{
-        if(idx===S.multiclass.length-1){mc.levels=remaining;}
-        else{const share=Math.max(1,Math.round(mc.levels/oldMcTotal*mcTotal));mc.levels=share;remaining-=share;}
-      });
+      const shares=S.multiclass.map(mc=>Math.max(1,Math.floor(mc.levels/oldMcTotal*mcTotal)));
+      let used=shares.reduce((a,b)=>a+b,0);
+      // 先补齐低于 1 的(保护),再把余量/缺口集中到份额最大的一项
+      let bigIdx=0; S.multiclass.forEach((mc,i)=>{ if(mc.levels>S.multiclass[bigIdx].levels) bigIdx=i; });
+      shares[bigIdx]+=mcTotal-used;
+      if(shares[bigIdx]<1) shares[bigIdx]=1; // 极端小差额兜底
+      S.multiclass.forEach((mc,i)=>{ mc.levels=shares[i]; });
     }
   }
   renderProgress();
@@ -1343,12 +1337,12 @@ function showSubclassDetail(name){
   const c=curClass(); if(!c) return;
   const sub=SUBCLASSES[c.id]&&SUBCLASSES[c.id][name];
   if(!sub) return;
-  let body='<div class="m-desc" style="margin-bottom:10px">'+sub.desc+'</div>';
+  let body='<div class="m-desc" style="margin-bottom:10px">'+esc(sub.desc)+'</div>';
   body+='<div class="m-meta" style="border-top:1px solid var(--line);padding-top:10px"><b>子职特性(按等级):</b></div>';
   sub.features.forEach(f=>{
-    body+='<div class="trait" style="margin:8px 0"><span class="tn">'+f.lv+'级 '+f.n+'。</span> '+f.d+'</div>';
+    body+='<div class="trait" style="margin:8px 0"><span class="tn">'+f.lv+'级 '+esc(f.n)+'。</span> '+esc(f.d)+'</div>';
   });
-  showModal('<h3>'+name+'</h3>',body);
+  showModal('<h3>'+esc(name)+'</h3>',body);
 }
 
 function renderToolPick(){
@@ -1495,17 +1489,19 @@ function showSpeciesDetail(speciesId){
 function showFightingStyleDetail(name){
   const fs=FIGHTING_STYLES.find(x=>x.n===name);
   if(!fs) return;
-  showModal('<h3>'+fs.n+'</h3>','<div class="m-desc">'+fs.d+'</div>');
+  showModal('<h3>'+esc(fs.n)+'</h3>','<div class="m-desc">'+esc(fs.d)+'</div>');
 }
 // 超魔法详情
 function showMetamagicDetail(name){
   const mm=METAMAGIC_OPTIONS.find(x=>x.n===name);
   if(!mm) return;
-  showModal('<h3>'+mm.n+'</h3>','<div class="m-meta"><b>消耗:</b>'+mm.cost+'</div><div class="m-desc" style="margin-top:8px">'+mm.d+'</div>');
+  showModal('<h3>'+esc(mm.n)+'</h3>','<div class="m-meta"><b>消耗:</b>'+esc(mm.cost)+'</div><div class="m-desc" style="margin-top:8px">'+esc(mm.d)+'</div>');
 }
 // 战技详情
 function showManeuverDetail(name){
-  showModal('<h3>'+name+'</h3>','<div class="m-desc">战斗大师战技,消耗卓越骰使用。具体效果请查阅规则书。</div>');
+  const mn=MANEUVERS.find(x=>x.n===name);
+  if(!mn) return;
+  showModal('<h3>'+esc(mn.n)+'</h3>','<div class="m-meta"><b>战斗大师战技,消耗一枚卓越骰</b></div><div class="m-desc" style="margin-top:8px">'+esc(mn.d)+'</div>');
 }
 
 function showBgDetail(){
@@ -1749,7 +1745,7 @@ function showFeatDetailByName(name,type){
   const list=type==='epic'?EPIC_BOON_FEATS:GENERAL_FEATS;
   const f=list.find(x=>x.n===name);
   if(!f)return;
-  showModal('<h3>'+f.n+'</h3>','<div class="m-desc">'+f.d+'</div>');
+  showModal('<h3>'+esc(f.n)+'</h3>','<div class="m-desc">'+esc(f.d)+'</div>');
 }
 
 function setAsiType(i,type){
@@ -1889,13 +1885,19 @@ function renderSpellUI(){
   const box=$("spell-ui"),hint=$("spell-hint");
   const c=curClass();
   if(!isSpellcaster()){box.innerHTML="";hint.textContent="";return}
+  const lv=S.level||1;
   const cantripN=spellCantripCount();
   const spellN=spellTotalCount();
   const maxLv=maxSpellLevel();
   let spellDesc="";
   if(c.spellsKnown) spellDesc="选择 "+spellN+" 个法术(已知法术,固定)";
   else if(c.prepSpells) spellDesc="准备 "+spellN+" 个法术(每日可换)";
-  else if(c.spellbookL1) spellDesc="法术书含 "+spellN+" 个法术";
+  else if(c.spellbookL1){
+    // 法师区分:法术书容量 vs 当前可准备数(智力调整值+法师等级)
+    const fa=finalAbi();
+    const prepN=Math.max(1,mod(fa["智力"])+lv);
+    spellDesc="抄录 "+spellN+" 个法术入法术书;当前可准备 <b>"+prepN+"</b> 个(智力调整值+法师等级,长休可换)。升级/换法术时可从书内挑选";
+  }
   if(maxLv===0&&cantripN===0){hint.innerHTML="<b>"+c.name+"</b>当前等级(1-2级)尚未解锁法术。3级开始可获得法术。";box.innerHTML="";return}
   const spellStat=isSpellcaster()?(c.spellStat||"智力"):"智力";
   hint.innerHTML="<b>"+c.name+(S.subClass?"("+S.subClass+")":"")+"</b>使用<b>"+spellStat+"</b>施法。请选择 <b>"+cantripN+"</b> 个戏法 和 <b>"+spellN+"</b> 个法术(最高"+RING_NAMES[maxLv-1]+")。"+spellDesc+"。";
@@ -1933,10 +1935,11 @@ function renderSpellList(){
     const max=isC?cantripN:spellN;
     const chosenArr=isC?S.chosenCantrips:S.chosenSpells;
     const disabled=!sel && chosenArr.length>=max;
-    const name=s.n.replace(/'/g,"\\'");
+    // onclick 内联字符串:先做 JS 转义(反斜杠/单引号),再 esc() 保证属性安全
+    const name=esc(s.n.replace(/\\/g,"\\\\").replace(/'/g,"\\'"));
     let html='<div class="spell-item '+(sel?'sel':'')+'">';
     html+='<div style="display:flex;justify-content:space-between;align-items:center">';
-    html+='<div style="flex:1"><span class="sn">'+s.n+'</span><span class="badge">'+s.lv+'</span><span class="badge">'+s.sc+'</span></div>';
+    html+='<div style="flex:1"><span class="sn">'+esc(s.n)+'</span><span class="badge">'+esc(s.lv)+'</span><span class="badge">'+esc(s.sc)+'</span></div>';
     html+='<div style="display:flex;gap:6px">';
     html+='<button class="btn ghost" style="padding:4px 10px;font-size:.76rem" onclick="previewOnly(\''+name+'\')">详情</button>';
     if(sel){
@@ -1947,12 +1950,12 @@ function renderSpellList(){
       html+='<button class="btn" style="padding:4px 12px;font-size:.76rem" onclick="toggleSpell(\''+name+'\','+isC+')">选择</button>';
     }
     html+='</div></div>';
-    html+='<div class="sm">'+s.ct+' · '+s.rg+' · '+s.du+'</div></div>';
+    html+='<div class="sm">'+esc(s.ct)+' · '+esc(s.rg)+' · '+esc(s.du)+'</div></div>';
     return html;
   }).join("") : '<p class="note" style="padding:14px">无匹配法术</p>';
   let selHtml="";
-  S.chosenCantrips.forEach(n=>{const nm=n.replace(/'/g,"\\'");selHtml+='<span class="sel-pill" onclick="toggleSpell(\''+nm+'\',true)">戏法:'+n+' ✕</span>';});
-  S.chosenSpells.forEach(n=>{const nm=n.replace(/'/g,"\\'");selHtml+='<span class="sel-pill" onclick="toggleSpell(\''+nm+'\',false)">'+n+' ✕</span>';});
+  S.chosenCantrips.forEach(n=>{const nm=esc(n.replace(/\\/g,"\\\\").replace(/'/g,"\\'"));selHtml+='<span class="sel-pill" onclick="toggleSpell(\''+nm+'\',true)">戏法:'+esc(n)+' ✕</span>';});
+  S.chosenSpells.forEach(n=>{const nm=esc(n.replace(/\\/g,"\\\\").replace(/'/g,"\\'"));selHtml+='<span class="sel-pill" onclick="toggleSpell(\''+nm+'\',false)">'+esc(n)+' ✕</span>';});
   $("sel-spells").innerHTML=selHtml?'<p class="note">已选(点击移除):</p>'+selHtml:"";
   const counter='已选戏法 <b>'+S.chosenCantrips.length+'/'+cantripN+'</b> · 已选法术 <b>'+S.chosenSpells.length+'/'+spellN+'</b>';
   const ce=$("spell-counter"); if(ce) ce.innerHTML=counter;
@@ -2229,6 +2232,16 @@ function renderLevelInfo(){
     if(ms>0) unlocks.push('最高'+RING_NAMES[ms-1]+'法术');
     if(lv>=4) unlocks.push('戏法+1');
     if(lv>=10) unlocks.push('戏法+1');
+  }
+  // 子职施法者:战士(奥法骑士)/游荡者(诡术师)3 级起施展法师法术,环阶按 1/3 施法者(等效等级=floor(等级/3))
+  if(c&&!c.spell){
+    const subCasters={fighter:'奥法骑士',rogue:'诡术师'};
+    if(subCasters[c.id]){
+      if(S.subClass===subCasters[c.id]&&lv>=3){
+        const ms=maxSpellLevelByClass('wizard',Math.floor(lv/3));
+        if(ms>0) unlocks.push('子职施法:最高'+RING_NAMES[ms-1]+'法术');
+      } else unlocks.push('3级选「'+subCasters[c.id]+'」子职后可施法');
+    }
   }
   if(lv>=5) unlocks.push('额外攻击(多数职业)');
   info+='<p style="margin:0"><b style="color:var(--gold2)">已解锁:</b>'+(unlocks.length?unlocks.join('、'):'仅基础特性')+'</p>';

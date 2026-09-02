@@ -178,14 +178,14 @@
     const cardBtns = `<button class="pin-btn" type="button" data-pin="${esc(uid)}" draggable="false" title="置顶该卡片">↑</button><button class="edit-btn" type="button" data-editcard="${esc(uid)}" draggable="false" title="编辑此卡文本">✎</button><button class="del-btn" type="button" data-delcard="${esc(uid)}" draggable="false" title="删除此卡（或把卡片拖到页面外深色区域）">✕</button>`;
     const consBadge = s.consumable ? `<span class="cons-badge">消耗品</span>` : "";
     const attBadge = s.attunement ? `<span class="att-tag">需同调</span>` : "";
-    return `<article class="card r-${esc(s.rarity)}${s.consumable ? " cons" : ""}" data-id="${esc(uid)}" draggable="true"${styleAttr}>
+    return `<article class="card r-${esc(s.rarity)}${s.consumable ? " cons" : ""}${(state._overflow && state._overflow.has(uid)) ? " overflowing" : ""}" data-id="${esc(uid)}" draggable="true"${styleAttr}>
       ${cardBtns}
       <div class="card-head">
         <div class="card-name">${esc(s.nameZh || "（未命名）")} ${s.nameEn ? `<span class="en">${esc(s.nameEn)}</span>` : ""}</div>
         <div class="card-tags"><span class="card-tag">${esc(s.rarity || "")}</span>${consBadge}${attBadge}</div>
       </div>
       <div class="card-meta">${metaLine(s)}</div>
-      <p class="card-desc">${esc(s.description || "").replace(/\n/g, "<br>")}</p>
+      <p class="card-desc">${esc(s.description || "")}</p>
       ${chargeHtml(s)}
     </article>`;
   }
@@ -200,9 +200,10 @@
     let m = document.getElementById("__measurer");
     if (!m) { m = document.createElement("div"); m.id = "__measurer"; m.style.cssText = "position:absolute;left:-99999px;top:0;visibility:hidden;pointer-events:none;"; document.body.appendChild(m); }
     m.style.width = w + "px";
-    const sizes = {};
+    const sizes = {}; const overflow = new Set();
     const gapPx = GAP_MM * PX_PER_MM;
-    for (const e of entries) { const s = getEntry(e.itemId); if (!s) { sizes[e.uid] = 1; continue; } m.innerHTML = cardHtml(s, "", e.uid); const art = m.querySelector("article"); const nat = art ? art.offsetHeight : 0; sizes[e.uid] = nat <= h ? 1 : (nat <= 2 * h + gapPx ? 2 : 3); }
+    for (const e of entries) { const s = getEntry(e.itemId); if (!s) { sizes[e.uid] = 1; continue; } m.innerHTML = cardHtml(s, "", e.uid); const art = m.querySelector("article"); const nat = art ? art.offsetHeight : 0; sizes[e.uid] = nat <= h ? 1 : (nat <= 2 * h + gapPx ? 2 : 3); if (nat > 3 * h + 2 * gapPx + 2) overflow.add(e.uid); }
+    state._overflow = overflow;
     return sizes;
   }
   // 装箱:slotHints 指定的卡(按 uid)先就位,其余按顺序自动装(页码只前进);返回每页 {items, grid}
@@ -490,8 +491,9 @@
     $("#fontUp").addEventListener("click", () => setFontScale(state.fontScale + 0.05));
     $("#fontDown").addEventListener("click", () => setFontScale(state.fontScale - 0.05));
 
-    // 拼音库就绪后：预建缓存；若已有搜索词则按声音近似重排
+    // 拼音库就绪后：若已有搜索词则按声音近似重排;失败则提示已退化为字符级模糊
     window.addEventListener("pinyin-ready", () => { if (state.filters.q.trim()) renderList(); });
+    window.addEventListener("pinyin-failed", () => showToast("拼音搜索不可用(离线或网络受限),已退化为字符模糊匹配"));
   }
 
   function init() {
