@@ -120,11 +120,13 @@ html.embedded .topbar{padding-right:130px;}
 #pages{display:grid;grid-template-columns:repeat(2,max-content);justify-content:center;align-items:start;column-gap:26px;row-gap:24px;transform-origin:top center;}
 .page-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;}
 .page-label{font-size:11px;color:var(--ink-soft);font-family:var(--serif);}
-.page{background:#f6efdb;box-shadow:0 2px 8px rgba(60,40,15,.22),0 0 0 1px var(--line-strong);display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:var(--gap,5mm);overflow:hidden;}
+.page{background:#f6efdb;box-shadow:0 2px 8px rgba(60,40,15,.22),0 0 0 1px var(--line-strong);display:grid;grid-template-columns:1fr 1fr;/* 行数由 JS 内联写入(半行粒度);行间距由卡片上下 margin 提供 */column-gap:var(--gap,5mm);row-gap:0;overflow:hidden;}
 /* 内容区 = 纸张 - 页边距10mm,宽高各再留 1mm 余量,防打印时最右列卡片边框被裁 */
 #pages{--page-w:189mm;--page-h:276mm;--gap:5mm;}
 #pages[data-size="Letter"]{--page-w:194.9mm;--page-h:258mm;}
-.page{width:var(--page-w);height:var(--page-h);gap:var(--gap);}
+.page{width:var(--page-w);height:var(--page-h);column-gap:var(--gap);row-gap:0;}
+/* 卡片上下留半 gap,与相邻卡形成完整间距 */
+.card{margin:calc(var(--gap) / 2) 0;}
 /* 空槽位:平时不显示,拖动卡片时可见;ok=该卡能放进,hover=悬停中 */
 .cell-slot{display:none;border:1.5px dashed var(--line-strong);border-radius:4px;background:rgba(201,162,39,.05);}
 #pages.slot-mode .cell-slot{display:flex;opacity:.5;}
@@ -138,18 +140,18 @@ html.embedded .topbar{padding-right:130px;}
 .empty-state .muted{font-size:12px;opacity:.7;}
 
 /* 物品卡（字号随 --card-fs 缩放,由工具条 A⁻/A⁺ 控制） */
-.card{position:relative;border:1.4px solid #6b4a1f;border-radius:4px;padding:4mm 4.5mm;overflow:hidden;display:flex;flex-direction:column;gap:1.5mm;background:#fdf8ea;color:var(--ink);font-size:calc(8.6pt * var(--card-fs,1));line-height:1.34;}
+.card{position:relative;border:1.4px solid #6b4a1f;border-radius:4px;padding:4mm 4.5mm;overflow:hidden;display:flex;flex-direction:column;gap:1.5mm;background:#fdf8ea;color:var(--ink);font-size:calc(8.6pt * var(--card-fs,1) * var(--cfs,1));line-height:1.34;}
 .card-head{display:flex;align-items:baseline;justify-content:space-between;gap:4px;border-bottom:1.5px solid #8a5a2a;padding-bottom:1.5mm;}
-.card-name{font-size:calc(11.6pt * var(--card-fs,1));font-weight:700;font-family:var(--serif);color:#1f130a;}
-.card-name .en{font-size:calc(8.6pt * var(--card-fs,1));color:#6b4a1f;font-weight:500;margin-left:3px;font-family:Georgia,serif;}
-.card-tag{font-size:calc(7.8pt * var(--card-fs,1));font-weight:600;color:#fff;padding:0 5px;border-radius:3px;white-space:nowrap;align-self:center;background:var(--r-普通);}
+.card-name{font-size:calc(11.6pt * var(--card-fs,1) * var(--cfs,1));font-weight:700;font-family:var(--serif);color:#1f130a;}
+.card-name .en{font-size:calc(8.6pt * var(--card-fs,1) * var(--cfs,1));color:#6b4a1f;font-weight:500;margin-left:3px;font-family:Georgia,serif;}
+.card-tag{font-size:calc(7.8pt * var(--card-fs,1) * var(--cfs,1));font-weight:600;color:#fff;padding:0 5px;border-radius:3px;white-space:nowrap;align-self:center;background:var(--r-普通);}
 .card.r-普通 .card-tag{background:var(--r-普通)} .card.r-非普通 .card-tag{background:var(--r-非普通)}
 .card.r-珍稀 .card-tag{background:var(--r-珍稀)} .card.r-极珍稀 .card-tag{background:var(--r-极珍稀)}
 .card.r-传说 .card-tag{background:var(--r-传说)} .card.r-神器 .card-tag{background:var(--r-神器)}
 .card.r-多种稀有度 .card-tag{background:var(--r-多种稀有度)}
-.card-meta{font-size:calc(8pt * var(--card-fs,1));color:#4a3a28;margin:0;font-style:italic;}
+.card-meta{font-size:calc(8pt * var(--card-fs,1) * var(--cfs,1));color:#4a3a28;margin:0;font-style:italic;}
 .card-meta .att{font-style:normal;color:var(--crimson);font-weight:600;}
-.card-desc{margin:0;flex:1 1 auto;overflow:hidden;font-size:calc(8.2pt * var(--card-fs,1));line-height:1.36;white-space:pre-wrap;word-break:break-word;color:#2a1d12;}
+.card-desc{margin:0;flex:1 1 auto;overflow:hidden;font-size:calc(8.2pt * var(--card-fs,1) * var(--cfs,1));line-height:1.36;white-space:pre-wrap;word-break:break-word;color:#2a1d12;}
 .card.empty{border:0;background:transparent;}
 .card[draggable="true"]{cursor:grab;}
 .card[draggable="true"]:active{cursor:grabbing;}
@@ -163,17 +165,23 @@ html.embedded .topbar{padding-right:130px;}
 .card:hover .pin-btn,.card:hover .edit-btn,.card:hover .del-btn{opacity:1;}
 .pin-btn:hover,.edit-btn:hover{background:var(--gold);color:#2a190d;border-color:var(--gold-dk);transform:scale(1.12);}
 .del-btn:hover{background:var(--crimson);color:#fff;border-color:var(--crimson);transform:scale(1.12);}
+/* 单卡字号按钮 A⁻/A⁺ */
+.cf-btn{position:absolute;top:2mm;width:27px;height:27px;padding:0;border:1.2px solid #8a5a2a;background:rgba(253,248,234,.95);color:#6b4a1f;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s,background .12s,color .12s,transform .12s;z-index:3;font-size:11px;line-height:1;font-weight:700;box-shadow:0 1px 3px rgba(60,40,15,.35);}
+.cf-btn.down{right:calc(2.5mm + 96px);}
+.cf-btn.up{right:calc(2.5mm + 128px);}
+.card:hover .cf-btn{opacity:1;}
+.cf-btn:hover{background:var(--gold);color:#2a190d;border-color:var(--gold-dk);transform:scale(1.12);}
 /* 拖到纸面外（深色桌面/预览区外）= 删除：光标旁小暗牌提示「松开删除」 */
 #dragDeleteHint{position:fixed;z-index:95;display:none;pointer-events:none;background:#1f130a;color:#f4e3b0;border:1px solid var(--gold-dk);border-radius:8px;padding:5px 12px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.4);white-space:nowrap;}
 #dragDeleteHint.show{display:block;}
 .card .card-meta:empty,.card .card-desc:empty{min-height:8pt;}
 /* 卡片：消耗品徽章 + 充能圆圈 */
 .card-tags{display:flex;align-items:center;gap:4px;align-self:center}
-.cons-badge{font-size:calc(6.6pt * var(--card-fs,1));font-weight:700;color:#fff;background:var(--crimson);padding:0 5px;border-radius:3px;white-space:nowrap;line-height:1.6}
-.att-tag{font-size:calc(6.6pt * var(--card-fs,1));font-weight:700;color:#fff;background:#3a6ea5;padding:0 5px;border-radius:3px;white-space:nowrap;line-height:1.6}
+.cons-badge{font-size:calc(6.6pt * var(--card-fs,1) * var(--cfs,1));font-weight:700;color:#fff;background:var(--crimson);padding:0 5px;border-radius:3px;white-space:nowrap;line-height:1.6}
+.att-tag{font-size:calc(6.6pt * var(--card-fs,1) * var(--cfs,1));font-weight:700;color:#fff;background:#3a6ea5;padding:0 5px;border-radius:3px;white-space:nowrap;line-height:1.6}
 .charge-circles{display:flex;align-items:center;gap:3.5px;justify-content:flex-end;flex-wrap:wrap;margin-top:1.5mm;min-height:10pt}
 .c-circle{width:13px;height:13px;border:1.4px solid #6b4a1f;border-radius:50%;background:transparent;display:inline-block;flex:0 0 auto}
-.cc-label{font-size:calc(7.5pt * var(--card-fs,1));color:#6b4a1f;margin-right:5px;font-weight:600;white-space:nowrap}
+.cc-label{font-size:calc(7.5pt * var(--card-fs,1) * var(--cfs,1));color:#6b4a1f;margin-right:5px;font-weight:600;white-space:nowrap}
 /* 左列表：消耗品徽标 + 计数 + 减号 */
 .badge.cons{background:#8b1e2d}
 .cnt-badge{display:inline-block;margin-left:5px;padding:0 6px;border-radius:8px;background:var(--gold);color:#2a190d;font-size:11px;font-weight:700;line-height:1.5}
@@ -184,7 +192,7 @@ html.embedded .topbar{padding-right:130px;}
 @media print{
   html,body{background:#fff;height:auto;}
   #app{display:block;height:auto;overflow:visible;}
-  .topbar,.picker,.preview-toolbar,.empty-state,.toast,.pin-btn,.edit-btn,.del-btn,#__measurer,#dragDeleteHint,.cell-slot{display:none !important;}
+  .topbar,.picker,.preview-toolbar,.empty-state,.toast,.pin-btn,.edit-btn,.del-btn,.cf-btn,#__measurer,#dragDeleteHint,.cell-slot{display:none !important;}
   .layout{display:block;}
   .preview{display:block;background:#fff;}
   .preview-scroll{display:block;overflow:visible;padding:0;}

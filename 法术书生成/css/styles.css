@@ -265,14 +265,17 @@ html.embedded .topbar { padding-right: 130px; }
   background: #f6efdb; box-shadow: 0 2px 8px rgba(60,40,15,.22), 0 0 0 1px var(--line-strong);
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: repeat(3, 1fr);
-  gap: var(--gap, 5mm);
+  /* 行数由 JS 内联写入(半行粒度 repeat(N,1fr));行间距由卡片上下 margin 提供 */
+  column-gap: var(--gap, 5mm);
+  row-gap: 0;
   overflow: hidden;
 }
 /* A4 / Letter 内容区（= 纸张 - 左右/上下页边距 10mm，宽高各再留 1mm 余量：防打印时最右列卡片边框被裁 / 溢出空白页） */
 #pages { --page-w: 189mm; --page-h: 276mm; --gap: 5mm; }
 #pages[data-size="Letter"] { --page-w: 194.9mm; --page-h: 258mm; }
-.page { width: var(--page-w); height: var(--page-h); gap: var(--gap); }
+.page { width: var(--page-w); height: var(--page-h); column-gap: var(--gap); row-gap: 0; }
+/* 卡片上下留半 gap,与相邻卡形成完整间距 */
+.card { margin: calc(var(--gap) / 2) 0; }
 /* 空槽位:平时不显示,拖动卡片时可见;ok=该卡能放进,hover=悬停中 */
 .cell-slot { display: none; border: 1.5px dashed var(--line-strong); border-radius: 4px; background: rgba(201,162,39,.05); }
 #pages.slot-mode .cell-slot { display: flex; opacity: .5; }
@@ -293,12 +296,12 @@ html.embedded .topbar { padding-right: 130px; }
   padding: 4mm 4.5mm; overflow: hidden;
   display: flex; flex-direction: column; gap: 1.5mm;
   background: #fdf8ea; color: var(--ink);
-  font-size: calc(8.6pt * var(--card-fs,1)); line-height: 1.34;
+  font-size: calc(8.6pt * var(--card-fs,1) * var(--cfs,1)); line-height: 1.34;
 }
 .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; border-bottom: 1.5px solid #8a5a2a; padding-bottom: 1.5mm; }
-.card-name { font-size: calc(11.6pt * var(--card-fs,1)); font-weight: 700; font-family: var(--serif); color: #1f130a; }
-.card-name .en { font-size: calc(8.6pt * var(--card-fs,1)); color: #6b4a1f; font-weight: 500; margin-left: 3px; font-family: Georgia, serif; }
-.card-tag { font-size: calc(7.6pt * var(--card-fs,1)); font-weight: 600; color: #fff; padding: 0 5px; border-radius: 3px; white-space: nowrap; align-self: center; }
+.card-name { font-size: calc(11.6pt * var(--card-fs,1) * var(--cfs,1)); font-weight: 700; font-family: var(--serif); color: #1f130a; }
+.card-name .en { font-size: calc(8.6pt * var(--card-fs,1) * var(--cfs,1)); color: #6b4a1f; font-weight: 500; margin-left: 3px; font-family: Georgia, serif; }
+.card-tag { font-size: calc(7.6pt * var(--card-fs,1) * var(--cfs,1)); font-weight: 600; color: #fff; padding: 0 5px; border-radius: 3px; white-space: nowrap; align-self: center; }
 .card.l0 .card-tag{background:var(--l0)} .card.l1 .card-tag{background:var(--l1)}
 .card.l2 .card-tag{background:var(--l2)} .card.l3 .card-tag{background:var(--l3)}
 .card.l4 .card-tag{background:var(--l4)} .card.l5 .card-tag{background:var(--l5)}
@@ -307,20 +310,20 @@ html.embedded .topbar { padding-right: 130px; }
 
 .card-meta { display: grid; grid-template-columns: 1fr 1fr; gap: .8mm 3mm; margin: 0; }
 .card-meta > div { display: flex; gap: 3px; align-items: baseline; }
-.card-meta dt { font-weight: 700; color: #6b4a1f; font-size: calc(7.6pt * var(--card-fs,1)); white-space: nowrap; margin: 0; }
-.card-meta dd { margin: 0; font-size: calc(8pt * var(--card-fs,1)); color: #2a1d12; }
+.card-meta dt { font-weight: 700; color: #6b4a1f; font-size: calc(7.6pt * var(--card-fs,1) * var(--cfs,1)); white-space: nowrap; margin: 0; }
+.card-meta dd { margin: 0; font-size: calc(8pt * var(--card-fs,1) * var(--cfs,1)); color: #2a1d12; }
 /* 卷轴模式：职业行横跨整行 */
 .card-meta .m-classes { grid-column: 1 / -1; }
 .card-meta .m-classes dd { font-weight: 600; color: #6b4a1f; }
-.dd-tag { font-size: calc(7pt * var(--card-fs,1)); padding: 0 4px; border-radius: 8px; color:#fff; margin-left:3px; vertical-align: 1px; }
+.dd-tag { font-size: calc(7pt * var(--card-fs,1) * var(--cfs,1)); padding: 0 4px; border-radius: 8px; color:#fff; margin-left:3px; vertical-align: 1px; }
 .dd-tag.c{background:var(--crimson)} .dd-tag.r{background:#3a6ea5}
 
 .card-desc {
   margin: 0; flex: 1 1 auto; overflow: hidden;
-  font-size: calc(8.2pt * var(--card-fs,1)); line-height: 1.36; white-space: pre-wrap;
+  font-size: calc(8.2pt * var(--card-fs,1) * var(--cfs,1)); line-height: 1.36; white-space: pre-wrap;
   word-break: break-word; color: #2a1d12;
 }
-.card-higher { margin: 0; font-size: calc(7.9pt * var(--card-fs,1)); color: #7a4a00; border-top: 1px dotted #c9a057; padding-top: 1mm; }
+.card-higher { margin: 0; font-size: calc(7.9pt * var(--card-fs,1) * var(--cfs,1)); color: #7a4a00; border-top: 1px dotted #c9a057; padding-top: 1mm; }
 .card-higher b { color: #9c6b1f; }
 .card.empty { border: 0; background: transparent; }
 /* 拖拽与置顶 */
@@ -341,6 +344,21 @@ html.embedded .topbar { padding-right: 130px; }
 }
 .card:hover .pin-btn { opacity: 1; }
 .pin-btn:hover { background: var(--gold); color: #2a190d; border-color: var(--gold-dk); transform: scale(1.12); }
+/* 单卡字号按钮 A⁻/A⁺ */
+.cf-btn {
+  position: absolute; top: 2mm;
+  width: 27px; height: 27px; padding: 0;
+  border: 1.2px solid #8a5a2a; background: rgba(253,248,234,.95);
+  color: #6b4a1f; border-radius: 50%;
+  font-size: 11px; line-height: 1; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .12s, background .12s, color .12s, transform .12s;
+  z-index: 3; box-shadow: 0 1px 3px rgba(60,40,15,.35);
+}
+.cf-btn.down { right: calc(2.5mm + 36px); }
+.cf-btn.up { right: calc(2.5mm + 72px); }
+.card:hover .cf-btn { opacity: 1; }
+.cf-btn:hover { background: var(--gold); color: #2a190d; border-color: var(--gold-dk); transform: scale(1.12); }
 /* 拖到纸面外（深色桌面/预览区外）= 删除：光标旁小暗牌提示「松开删除」 */
 #dragDeleteHint{position:fixed;z-index:95;display:none;pointer-events:none;background:#1f130a;color:#f4e3b0;border:1px solid var(--gold-dk);border-radius:8px;padding:5px 12px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.4);white-space:nowrap;}
 #dragDeleteHint.show{display:block;}
@@ -351,7 +369,7 @@ html.embedded .topbar { padding-right: 130px; }
 @media print {
   html, body { background: #fff; height: auto; }
   #app { display: block; height: auto; overflow: visible; }
-  .topbar, .picker, .preview-toolbar, .empty-state, .toast, #__measurer, .pin-btn, #dragDeleteHint, .cell-slot { display: none !important; }
+  .topbar, .picker, .preview-toolbar, .empty-state, .toast, #__measurer, .pin-btn, .cf-btn, #dragDeleteHint, .cell-slot { display: none !important; }
   .layout { display: block; }
   .preview { display: block; background: #fff; }
   .preview-scroll { display: block; overflow: visible; padding: 0; }

@@ -20,14 +20,24 @@
     selEntries: [],          // [{uid, itemId}] —— 每条 = 一张卡；同物品可多条
     openDetails: new Set(),
     customItems: [],
-    pageSize: "A4", zoom: 100, fontScale: 1, slotHints: {}, _uidSeq: 0, _dragId: null, _pageCount: 0, _editingCustomId: null,
+    pageSize: "A4", zoom: 100, fontScale: 1, cardFont: {}, rowsPerPage: 3, slotHints: {}, _uidSeq: 0, _dragId: null, _pageCount: 0, _editingCustomId: null,
   };
   const getEntry = id => byId[id] || state.customItems.find(c => c.id === id);
   const countOf = id => state.selEntries.filter(e => e.itemId === id).length;
 
   const $ = (sel, root = document) => root.querySelector(sel);
   const esc = s => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  function displayType(item) { const m = (item.meta || "").match(/^([^，（(]+)(?:[（(]([^）)]*)[)）])?/); return m ? { type: m[1].trim(), detail: (m[2] || "").trim() } : { type: item.category || "", detail: "" }; }
+  // 类型/细节:优先用结构化字段 type/detail(自定义卡填写即显示);缺失时回退解析 meta
+  function displayType(item) {
+    let type = String(item.type || "").split(/[,，]/)[0].trim();
+    let detail = String(item.detail || "").trim();
+    if (!type && !detail) {
+      const m = (item.meta || "").match(/^([^，（(]+)(?:[（(]([^）)]*)[)）])?/);
+      if (m) { type = m[1].trim(); detail = (m[2] || "").trim(); }
+    }
+    if (!type && !detail) return { type: item.category || "", detail: "" };
+    return { type, detail };
+  }
   function metaLine(item) { const { type, detail } = displayType(item); if (!type && !detail) return item.attunement ? '<span class="att">需同调</span>' : ""; return (type || item.category || "") + (detail ? "（" + detail + "）" : "") + (item.attunement ? ' <span class="att">需同调</span>' : ""); }
 
   // ---------- 下拉 ----------
@@ -174,8 +184,9 @@
     return `<div class="charge-circles"><span class="cc-label">充能 ${s.charges}</span></div>`;
   }
   function cardHtml(s, gridStyle, uid) {
-    const styleAttr = gridStyle ? ` style="${gridStyle}"` : "";
-    const cardBtns = `<button class="pin-btn" type="button" data-pin="${esc(uid)}" draggable="false" title="置顶该卡片">↑</button><button class="edit-btn" type="button" data-editcard="${esc(uid)}" draggable="false" title="编辑此卡文本">✎</button><button class="del-btn" type="button" data-delcard="${esc(uid)}" draggable="false" title="删除此卡（或把卡片拖到页面外深色区域）">✕</button>`;
+    const cfs = state.cardFont[uid] || 1;
+    const styleAttr = ` style="${gridStyle || ""};--cfs:${cfs};"`;
+    const cardBtns = `<button class="pin-btn" type="button" data-pin="${esc(uid)}" draggable="false" title="置顶该卡片">↑</button><button class="edit-btn" type="button" data-editcard="${esc(uid)}" draggable="false" title="编辑此卡文本">✎</button><button class="del-btn" type="button" data-delcard="${esc(uid)}" draggable="false" title="删除此卡（或把卡片拖到页面外深色区域）">✕</button><button class="cf-btn down" type="button" data-cf="${esc(uid)}|-1" draggable="false" title="缩小这张卡的字号">A⁻</button><button class="cf-btn up" type="button" data-cf="${esc(uid)}|1" draggable="false" title="放大这张卡的字号">A⁺</button>`;
     const consBadge = s.consumable ? `<span class="cons-badge">消耗品</span>` : "";
     const attBadge = s.attunement ? `<span class="att-tag">需同调</span>` : "";
     return `<article class="card r-${esc(s.rarity)}${s.consumable ? " cons" : ""}${(state._overflow && state._overflow.has(uid)) ? " overflowing" : ""}" data-id="${esc(uid)}" draggable="true"${styleAttr}>
@@ -190,28 +201,42 @@
     </article>`;
   }
 
-  // ---------- 测量与分页（超出一格 → 占2行1列） ----------
+  // ---------- 测量与分页（半行粒度：1格=2半行,1.5格=3半行…） ----------
   const PX_PER_MM = 96 / 25.4;
   const PAGE_DIMS = { A4: { w: 189, h: 276 }, Letter: { w: 194.9, h: 258 } };
   const GAP_MM = 5;
-  function getCellDims() { const d = PAGE_DIMS[state.pageSize] || PAGE_DIMS.A4; return { w: ((d.w - GAP_MM) / 2) * PX_PER_MM, h: ((d.h - 2 * GAP_MM) / 3) * PX_PER_MM }; }
+  const halfRows = () => state.rowsPerPage * 2;
+  function getPageGrid() {
+    const d = PAGE_DIMS[state.pageSize] || PAGE_DIMS.A4;
+    return { colW: ((d.w - GAP_MM) / 2) * PX_PER_MM, halfH: (d.h * PX_PER_MM) / halfRows(), halfRows: halfRows(), gapPx: GAP_MM * PX_PER_MM };
+  }
   function computeSizes(entries) {
-    const { w, h } = getCellDims();
+    const { colW, halfH, halfRows, gapPx } = getPageGrid();
     let m = document.getElementById("__measurer");
     if (!m) { m = document.createElement("div"); m.id = "__measurer"; m.style.cssText = "position:absolute;left:-99999px;top:0;visibility:hidden;pointer-events:none;"; document.body.appendChild(m); }
-    m.style.width = w + "px";
+    m.style.width = colW + "px";
+    const vis = k => k * halfH - gapPx;
     const sizes = {}; const overflow = new Set();
-    const gapPx = GAP_MM * PX_PER_MM;
-    for (const e of entries) { const s = getEntry(e.itemId); if (!s) { sizes[e.uid] = 1; continue; } m.innerHTML = cardHtml(s, "", e.uid); const art = m.querySelector("article"); const nat = art ? art.offsetHeight : 0; sizes[e.uid] = nat <= h ? 1 : (nat <= 2 * h + gapPx ? 2 : 3); if (nat > 3 * h + 2 * gapPx + 2) overflow.add(e.uid); }
+    for (const e of entries) {
+      const s = getEntry(e.itemId); if (!s) { sizes[e.uid] = 2; continue; }
+      m.innerHTML = cardHtml(s, "", e.uid);
+      const art = m.querySelector("article");
+      const nat = art ? art.offsetHeight : 0;
+      let size = 2;
+      while (size < halfRows && nat > vis(size)) size++;
+      sizes[e.uid] = size;
+      if (nat > vis(halfRows)) overflow.add(e.uid);
+    }
     state._overflow = overflow;
     return sizes;
   }
-  // 装箱:slotHints 指定的卡(按 uid)先就位,其余按顺序自动装(页码只前进);返回每页 {items, grid}
+  // 装箱:slotHints 指定的卡(按 uid,半行槽)先就位,其余按顺序自动装;返回每页 {items, grid}
   function packPages(entries, sizes, hints) {
+    const R = halfRows();
     const pages = [];
-    const gridAt = p => { while (pages.length <= p) pages.push({ items: [], grid: [[null, null], [null, null], [null, null]] }); return pages[p]; };
+    const gridAt = p => { while (pages.length <= p) pages.push({ items: [], grid: Array.from({ length: R }, () => [null, null]) }); return pages[p]; };
     const fits = (p, row, col, span, skip) => {
-      if (row + span > 3) return false;
+      if (row + span > R) return false;
       const pg = pages[p]; if (!pg) return true;
       for (let r = row; r < row + span; r++) { const occ = pg.grid[r][col]; if (occ && occ !== skip) return false; }
       return true;
@@ -220,18 +245,17 @@
     const placed = new Set();
     for (const e of entries) {
       const h = hints && hints[e.uid]; if (!h) continue;
-      const size = sizes[e.uid] || 1;
+      const size = sizes[e.uid] || 2;
       if (fits(h.page, h.row, h.col, size, e.uid)) { place(e.uid, h.row, h.col, size, h.page); placed.add(e.uid); }
     }
     let cur = 0;
     for (const e of entries) {
       if (placed.has(e.uid)) continue;
-      const size = sizes[e.uid] || 1;
+      const size = sizes[e.uid] || 2;
       let done = false, guard = 0;
       while (!done && guard++ < 500) {
-        if (size === 3) { for (let c = 0; c < 2 && !done; c++) if (fits(cur, 0, c, 3, e.uid)) { place(e.uid, 0, c, 3, cur); done = true; } }
-        else if (size === 2) { for (let r = 0; r <= 1 && !done; r++) for (let c = 0; c < 2 && !done; c++) if (fits(cur, r, c, 2, e.uid)) { place(e.uid, r, c, 2, cur); done = true; } }
-        else { for (let r = 0; r < 3 && !done; r++) for (let c = 0; c < 2 && !done; c++) if (fits(cur, r, c, 1, e.uid)) { place(e.uid, r, c, 1, cur); done = true; } }
+        gridAt(cur);
+        for (let r = 0; r < R && !done; r++) for (let c = 0; c < 2 && !done; c++) if (fits(cur, r, c, size, e.uid)) { place(e.uid, r, c, size, cur); done = true; }
         if (!done) cur++;
       }
       placed.add(e.uid);
@@ -246,15 +270,16 @@
     const sizes = computeSizes(entries);
     const packed = packPages(entries, sizes, state.slotHints);
     state._pageCount = packed.length;
-    state._layout = { grids: packed.map(p => p.grid), sizes };
+    state._layout = { grids: packed.map(p => p.grid), sizes, halfRows: halfRows() };
     $("#pageCount").textContent = String(packed.length);
+    const R = halfRows();
     pagesEl.innerHTML = packed.map((page, i) => {
       const cards = page.items.map(it => { const s = getEntryById(it.uid); return s ? cardHtml(s, `grid-column:${it.col + 1}; grid-row:${it.row + 1} / span ${it.span};`, it.uid) : ""; }).join("");
       const slots = [];
-      for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++) {
+      for (let r = 0; r < R; r++) for (let c = 0; c < 2; c++) {
         if (!page.grid[r][c]) slots.push(`<div class="cell-slot" data-page="${i}" data-row="${r}" data-col="${c}" style="grid-column:${c + 1};grid-row:${r + 1};"></div>`);
       }
-      return `<div class="page-wrap"><div class="page-label">第 ${i + 1} 页 / 共 ${packed.length} 页</div><div class="page">${cards}${slots.join("")}</div></div>`;
+      return `<div class="page-wrap"><div class="page-label">第 ${i + 1} 页 / 共 ${packed.length} 页</div><div class="page" style="grid-template-rows:repeat(${R},1fr);">${cards}${slots.join("")}</div></div>`;
     }).join("");
     applyZoom();
   }
@@ -308,7 +333,19 @@
   // ---------- 排序 / 置顶 / 拖拽（按 uid） ----------
   function sortSelected() {
     if (!state.selEntries.length) return;
-    state.selEntries.sort((a, b) => { const sa = getEntry(a.itemId), sb = getEntry(b.itemId); const ra = sa ? (RARITY_ORDER[sa.rarity] ?? 9) : 9, rb = sb ? (RARITY_ORDER[sb.rarity] ?? 9) : 9; if (ra !== rb) return ra - rb; return (sa ? sa.nameZh : "").localeCompare(sb ? sb.nameZh : "", "zh"); });
+    const mode = ($("#sortMode") && $("#sortMode").value) || "rarity";
+    state.selEntries.sort((a, b) => {
+      const sa = getEntry(a.itemId), sb = getEntry(b.itemId);
+      if (mode === "category") {
+        const ca = sa ? sa.category || "" : "", cb = sb ? sb.category || "" : "";
+        if (ca !== cb) return ca.localeCompare(cb, "zh");
+        return (sa ? sa.nameZh : "").localeCompare(sb ? sb.nameZh : "", "zh");
+      }
+      if (mode === "name") return (sa ? sa.nameZh : "").localeCompare(sb ? sb.nameZh : "", "zh");
+      const ra = sa ? (RARITY_ORDER[sa.rarity] ?? 9) : 9, rb = sb ? (RARITY_ORDER[sb.rarity] ?? 9) : 9;
+      if (ra !== rb) return ra - rb;
+      return (sa ? sa.nameZh : "").localeCompare(sb ? sb.nameZh : "", "zh");
+    });
     state.slotHints = {};
     renderPreview(); renderSummary();
   }
@@ -318,12 +355,13 @@
   function reorder(uidRaw, targetRaw) { const uid = toUid(uidRaw), targetUid = toUid(targetRaw); if (uid === targetUid) return; const i = state.selEntries.findIndex(e => e.uid === uid); if (i < 0) return; const [e] = state.selEntries.splice(i, 1); const j = state.selEntries.findIndex(e => e.uid === targetUid); if (j < 0) state.selEntries.push(e); else state.selEntries.splice(j, 0, e); renderPreview(); renderSummary(); }
   // 删除单张卡（按 uid，不动自定义物品定义）
   function deleteEntry(uidRaw) { const uid = toUid(uidRaw); const idx = state.selEntries.findIndex(e => e.uid === uid); if (idx < 0) return; const [e] = state.selEntries.splice(idx, 1); delete state.slotHints[uid]; const s = getEntry(e.itemId); renderList(); renderPreview(); renderSummary(); showToast(`已删除卡片${s && s.nameZh ? "「" + s.nameZh + "」" : ""}（剩余 ${state.selEntries.length} 张）`); }
-  // 手动放入指定空槽
+  // 手动放入指定空槽(row 为半行索引)
   function setSlotHint(uidRaw, page, row, col) {
     const uid = toUid(uidRaw); if (!state.selEntries.some(e => e.uid === uid)) return;
     state.slotHints[uid] = { page, row, col };
     renderPreview(); renderSummary();
-    showToast(`已放到第 ${page + 1} 页 第${row + 1}排左起第${col + 1}列`);
+    const pos = row % 2 === 0 ? `第${row / 2 + 1}排` : `第${Math.floor(row / 2) + 1}排下半`;
+    showToast(`已放到第 ${page + 1} 页 ${pos}左起第${col + 1}列`);
   }
   // 编辑卡片文本：自定义卡直接进表单；数据卡先克隆为可编辑副本（保持原位置与张数）
   function editCard(uidRaw) {
@@ -379,7 +417,12 @@
 
   // ---------- 缩放 / 纸张 / 字号 ----------
   function applyZoom() { const p = $("#pages"); p.style.transform = `scale(${state.zoom / 100})`; $("#zoomLabel").textContent = state.zoom + "%"; }
-  function setPageSize(size) { state.pageSize = size; $("#pages").setAttribute("data-size", size); }
+  function setPageSize(size) { state.pageSize = size; $("#pages").setAttribute("data-size", size); state.slotHints = {}; }
+  // 工具条上的每页容量说明(随行数选择更新)
+  function updatePageInfoNote() {
+    const el = $("#pageInfoNote");
+    if (el) el.textContent = `每页 2×${state.rowsPerPage}(${state.rowsPerPage * 2} 张,过长的卡自动占 1.5/2 格…整列)`;
+  }
   // 卡片字号：写入 --card-fs，离屏测量器同步继承；重新排版（卡片可能因此占 2 格）
   function setFontScale(v) {
     state.fontScale = Math.min(1.4, Math.max(0.7, Math.round(v * 20) / 20));
@@ -419,7 +462,13 @@
     $("#importBtn").addEventListener("click", () => $("#importFile").click());
     $("#importFile").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; if (f) importFromFile(f); e.target.value = ""; });
 
-    $("#pageSize").addEventListener("change", e => setPageSize(e.target.value));
+    $("#pageSize").addEventListener("change", e => { setPageSize(e.target.value); renderPreview(); renderSummary(); });
+    $("#rowsPerPage").addEventListener("change", e => {
+      state.rowsPerPage = Math.max(3, Math.min(6, parseInt(e.target.value, 10) || 3));
+      state.slotHints = {};
+      renderPreview(); renderSummary();
+      updatePageInfoNote();
+    });
     $("#zoomIn").addEventListener("click", () => { state.zoom = Math.min(150, state.zoom + 10); applyZoom(); });
     $("#zoomOut").addEventListener("click", () => { state.zoom = Math.max(50, state.zoom - 10); applyZoom(); });
 
@@ -433,25 +482,27 @@
       const card = e.target.closest('.card[data-id]'); if (!card) return;
       state._dragId = toUid(card.dataset.id); card.classList.add("dragging");
       try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", card.dataset.id); } catch (_) {}
-      // 槽位模式:标出该卡能放进的空槽(按占格数判定;被拖卡自己占的格视为空)
+      // 槽位模式:标出该卡能放进的空槽(半行粒度;被拖卡自己占的格视为空)
       const lay = state._layout;
       if (lay) {
-        const sz = lay.sizes[state._dragId] || 1;
+        const sz = lay.sizes[state._dragId] || 2;
+        const R = lay.halfRows || 6;
         pages.classList.add("slot-mode");
         pages.querySelectorAll(".cell-slot").forEach(el => {
           const p = +el.dataset.page, r = +el.dataset.row, c = +el.dataset.col;
-          let ok = r + sz <= 3;
+          let ok = r + sz <= R;
           if (ok && lay.grids[p]) for (let rr = r; rr < r + sz; rr++) {
-            const occ = lay.grids[p][rr][c];
+            const occ = lay.grids[p][rr] && lay.grids[p][rr][c];
             if (occ && occ !== state._dragId) { ok = false; break; }
           }
           el.classList.toggle("ok", ok);
+          el.dataset.span = ok ? sz : 1;
         });
       }
     });
     pages.addEventListener("dragover", e => {
       const slot = e.target.closest(".cell-slot.ok");
-      if (slot && state._dragId) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; pages.querySelectorAll(".cell-slot.hover").forEach(x => { if (x !== slot) x.classList.remove("hover"); }); slot.classList.add("hover"); return; }
+      if (slot && state._dragId) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; pages.querySelectorAll(".cell-slot.hover").forEach(x => { if (x !== slot) { x.classList.remove("hover"); x.style.gridRowEnd = ""; } }); slot.classList.add("hover"); slot.style.gridRowEnd = "span " + (slot.dataset.span || 1); return; }
       const card = e.target.closest('.card[data-id]'); if (!card || !state._dragId) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; pages.querySelectorAll(".drop-target").forEach(c => { if (c !== card) c.classList.remove("drop-target"); }); card.classList.add("drop-target");
     });
     pages.addEventListener("drop", e => {
@@ -460,7 +511,18 @@
       if (slot && state._dragId) { e.preventDefault(); setSlotHint(state._dragId, +slot.dataset.page, +slot.dataset.row, +slot.dataset.col); state._dragId = null; return; }
       const card = e.target.closest('.card[data-id]'); if (!card || !state._dragId) return; e.preventDefault(); const tid = card.dataset.id; if (tid && toUid(tid) !== state._dragId) { delete state.slotHints[state._dragId]; reorder(state._dragId, tid); } state._dragId = null;
     });
-    pages.addEventListener("dragend", () => { pages.querySelectorAll(".dragging,.drop-target").forEach(c => { c.classList.remove("dragging", "drop-target"); }); pages.classList.remove("slot-mode"); pages.querySelectorAll(".cell-slot.ok,.cell-slot.hover").forEach(c => { c.classList.remove("ok", "hover"); }); state._dragId = null; });
+    pages.addEventListener("dragend", () => { pages.querySelectorAll(".dragging,.drop-target").forEach(c => { c.classList.remove("dragging", "drop-target"); }); pages.classList.remove("slot-mode"); pages.querySelectorAll(".cell-slot.ok,.cell-slot.hover").forEach(c => { c.classList.remove("ok", "hover"); c.style.gridRowEnd = ""; c.dataset.span = "1"; }); state._dragId = null; });
+    // 单卡字号 A⁻/A⁺(按 uid)
+    pages.addEventListener("click", e => {
+      const cf = e.target.closest("[data-cf]");
+      if (!cf) return;
+      e.stopPropagation();
+      const parts = cf.dataset.cf.split("|");
+      const uid = toUid(parts[0]), d = +parts[1];
+      state.cardFont[uid] = Math.min(1.5, Math.max(0.8, Math.round(((state.cardFont[uid] || 1) + d * 0.05) * 20) / 20));
+      renderPreview(); renderSummary();
+      showToast(`该卡字号 ${Math.round(state.cardFont[uid] * 100)}%`);
+    });
 
     // 拖到纸面（.page）之外——页面周围的深色桌面/预览区外——松开 = 删除该卡片（光标旁小暗牌提示）
     const inPage = t => !!(t && t.closest && t.closest(".page"));
@@ -499,7 +561,7 @@
   function init() {
     if (window.parent !== window) document.documentElement.classList.add("embedded");
     if (!ITEMS.length) { document.body.innerHTML = '<p style="padding:24px">未能加载物品数据（data/items.js）。</p>'; return; }
-    initFilters(); setPageSize("A4"); wire(); renderList(); renderPreview(); renderSummary();
+    initFilters(); setPageSize("A4"); wire(); updatePageInfoNote(); renderList(); renderPreview(); renderSummary();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();

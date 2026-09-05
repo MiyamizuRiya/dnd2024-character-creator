@@ -17,20 +17,25 @@ const escJsInline = s => s.replace(/<\/script>/g, '<\\/script>');   // 防内联
 const escCssInline = s => s.replace(/<\/style>/g, '<\\/style>');
 
 /* ---------- 1) 内联多文件工具(法术书/物品卡同构) ---------- */
+// 通用外链内联:匹配所有 <link rel=stylesheet href="x.css"> 与 <script src="x.js">,
+// 逐个读文件替换(不再假设 data/ 脚本是第一个);每处替换必须恰好命中一次
 function inlineTool(entryFile) {
   let html = read(entryFile);
   const dir = path.dirname(entryFile);
-  const css = read(path.join(dir, 'css/styles.css'));
-  const dataFile = html.match(/<script src="data\/([^"]+)"><\/script>/)[1];
-  const data = read(path.join(dir, 'data', dataFile));
-  const js = read(path.join(dir, 'js/app.js'));
-  const out = html
-    .replace('<link rel="stylesheet" href="css/styles.css">', '<style>\n' + escCssInline(css) + '\n</style>')
-    .replace('<script src="data/' + dataFile + '"></script>', '<script>\n' + escJsInline(data) + '\n</script>')
-    .replace('<script src="js/app.js"></script>', '<script>\n' + escJsInline(js) + '\n</script>');
-  if (out.includes('href="css/styles.css"') || out.includes('src="data/') || out.includes('src="js/app.js"'))
-    throw new Error(entryFile + ' 内联后仍有外链残留');
-  return out;
+  const inlineOnce = (html, pattern, build) => {
+    const matches = [...html.matchAll(pattern)];
+    if (matches.length !== 1) throw new Error(entryFile + ' 外链匹配数异常(' + matches.length + '): ' + pattern);
+    return html.replace(pattern, build(matches[0][1]));
+  };
+  html = inlineOnce(html, /<link rel="stylesheet" href="([^"]+)">/g,
+    href => '<style>\n' + escCssInline(read(path.join(dir, href))) + '\n</style>');
+  html = html.replace(/<script src="([^"]+)"><\/script>/g, (whole, src) => {
+    if (/^https?:/.test(src)) return whole; // CDN 外链保留(拼音库按需加载)
+    return '<script>\n' + escJsInline(read(path.join(dir, src))) + '\n</script>';
+  });
+  if (/<link rel="stylesheet"/.test(html) || /<script src="(?!https?:)/.test(html))
+    throw new Error(entryFile + ' 内联后仍有本地外链残留');
+  return html;
 }
 
 /* ---------- 2) 三个工具的自包含 HTML ---------- */

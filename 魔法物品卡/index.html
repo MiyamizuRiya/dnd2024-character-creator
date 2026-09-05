@@ -80,10 +80,16 @@
     <section class="preview" aria-label="打印预览">
       <div class="preview-toolbar">
         <div class="tb-left">
-          <div class="page-info">已选 <b id="selCount">0</b> 个 · 共 <b id="pageCount">0</b> 页（每页最多 6 张：3 行 × 2 列；过长物品自动占 2 行 1 列）</div>
-          <button type="button" id="sortBtn" class="btn btn-sort" title="按稀有度排序已选物品">⇅ 一键排序</button>
+          <div class="page-info">已选 <b id="selCount">0</b> 个 · 共 <b id="pageCount">0</b> 页<br><span id="pageInfoNote">每页 2×3(6 张,过长的卡自动占 1.5/2 格…整列)</span></div>
+          <button type="button" id="sortBtn" class="btn btn-sort" title="按所选方式排序已选物品">⇅ 一键排序</button>
+          <select id="sortMode" title="一键排序的依据" style="padding:3px 4px;font-size:12px;border:1px solid var(--line-strong);border-radius:6px;background:#fffdf5;color:var(--ink);font-family:inherit">
+            <option value="rarity">按稀有度</option>
+            <option value="category">按类别</option>
+            <option value="name">按名称</option>
+          </select>
         </div>
         <div class="preview-tools">
+          <label class="paper-size"><span>每页</span><select id="rowsPerPage"><option value="3">2×3（6张）</option><option value="4">2×4（8张）</option><option value="5">2×5（10张）</option><option value="6">2×6（12张）</option></select></label>
           <label class="paper-size"><span>纸张</span><select id="pageSize"><option value="A4">A4</option><option value="Letter">Letter</option></select></label>
           <button type="button" id="fontDown" class="btn btn-ghost btn-sm" title="缩小卡片字号">A⁻</button>
           <span id="fontLabel" class="zoom-label" title="卡片字号">100%</span>

@@ -1117,7 +1117,45 @@ function renderClasses(){
 
 function pickClass(id){
   S.cls=id; S.chosenSkills=[]; S.chosenCantrips=[]; S.chosenSpells=[]; S.toolChoices=[];
-  S.subClass=null;S.chosenInvocations=[];S.chosenFightingStyles=[];S.chosenMetamagic=[];S.chosenManeuvers=[]; renderClasses(); renderClassInfo(); renderSkillPick(); renderToolPick(); renderSubclassPick(); renderBgs();
+  S.subClass=null;S.gearChoice=null;S.chosenInvocations=[];S.chosenFightingStyles=[];S.chosenMetamagic=[];S.chosenManeuvers=[]; renderClasses(); renderClassInfo(); renderSkillPick(); renderToolPick(); renderSubclassPick(); renderBgs();
+}
+// 解析起始装备选项:"(A)…;或(B)…;或(C)…" → [{k:'A',text:'…'},…]
+function gearOptions(c){
+  const segs=String(c.startGear||"").split(/;|；/).map(s=>s.trim()).filter(Boolean);
+  const out=[];
+  for(const seg of segs){
+    const m=seg.match(/^\(?\s*或?\s*\(?([ABC])\)?\s*(.+)$/);
+    if(m) out.push({k:m[1],text:m[2].trim()});
+    else if(out.length) out[out.length-1].text+=";"+seg;
+    else out.push({k:"A",text:seg});
+  }
+  return out;
+}
+function setGear(k){ S.gearChoice=k; renderClassInfo(); }
+// 当前选定的起始装备组文本(未选则回退完整原文)
+function chosenGearText(){
+  const c=curClass(); if(!c) return "";
+  if(S.gearChoice){ const op=gearOptions(c).find(x=>x.k===S.gearChoice); if(op) return op.text; }
+  return c.startGear||"";
+}
+// 按所选装备估算 AC(2024 护甲基础值 + 盾)
+function calcGearAC(c,fa,gearText){
+  const g=String(gearText||"");
+  const dex=mod(fa["敏捷"]);
+  const hasShield=/盾/.test(g);
+  const hasArmor=/板甲|链甲|鳞甲|皮甲/.test(g);
+  let ac=null,note="";
+  if(/板甲/.test(g)){ac=18;note="板甲18";}
+  else if(/链甲衫/.test(g)){ac=13+Math.min(2,dex);note="链甲衫13+敏(≤2)";}
+  else if(/链甲/.test(g)){ac=16;note="链甲16";}
+  else if(/鳞甲/.test(g)){ac=14+Math.min(2,dex);note="鳞甲14+敏(≤2)";}
+  else if(/镶钉皮甲/.test(g)){ac=12+dex;note="镶钉皮甲12+敏";}
+  else if(/皮甲/.test(g)){ac=11+dex;note="皮甲11+敏";}
+  else if(c.id==="barbarian"&&!hasArmor){ac=10+dex+mod(fa["体质"]);note="无甲防御10+敏+体";}
+  else if(c.id==="monk"&&!hasArmor&&!hasShield){ac=10+dex+mod(fa["感知"]);note="无甲防御10+敏+感";}
+  else {ac=10+dex;note="无甲10+敏";}
+  if(hasShield&&!(c.id==="monk"&&!hasArmor)){ac+=2;note+="+盾2";} // 武僧无甲防御不允许盾
+  return {ac,note};
 }
 function renderClassInfo(){
   const box=$("class-info"); if(!S.cls){box.innerHTML="";$("skill-pick-wrap").classList.add("hide");return}
@@ -1127,7 +1165,19 @@ function renderClassInfo(){
   html+=`<span class="pill">护甲受训 ${c.armor}</span><span class="pill">武器 ${c.weapons}</span>`;
   if(c.tools) html+=`<span class="pill">工具 ${c.tools}</span>`;
   html+=`</div>`;
-  html+=`<p style="margin:6px 0;font-size:.85rem"><b style="color:var(--gold2)">起始装备:</b>${c.startGear}</p>`;
+  html+=`<p style="margin:6px 0;font-size:.85rem"><b style="color:var(--gold2)">起始装备:</b>`;
+  const gears=gearOptions(c);
+  if(gears.length>1){
+    if(!S.gearChoice||!gears.some(x=>x.k===S.gearChoice)) S.gearChoice=gears[0].k;
+    html+=`<span class="radio-row" style="margin-top:6px">`;
+    gears.forEach(op=>{
+      html+=`<span class="radio-opt ${S.gearChoice===op.k?'sel':''}" onclick="setGear('${op.k}')">${op.k} 组:${op.text.length>46?op.text.slice(0,46)+'…':op.text}</span>`;
+    });
+    html+=`</span><p class="note">已选 ${S.gearChoice} 组(计入角色卡 AC 估算与装备栏)</p>`;
+  } else {
+    html+=`${c.startGear}`;
+  }
+  html+=`</p>`;
   html+=`<p style="margin:10px 0 4px;color:var(--gold2);font-size:.85rem;font-weight:600">1 级职业特性</p><ul>`;
   c.level1.forEach(t=>html+=`<li>${t}</li>`);
   html+=`</ul>`;
@@ -2108,7 +2158,7 @@ function classFeaturesText(classId,levels,subClassName){
 }
 function renderSheet(){
   const fa=finalAbi(),c=curClass(),sp=curSpecies(),bg=curBg(),prof=proficiency();
-  let hp=0,ac=10,hasTough=false;
+  let hp=0,ac=10,acNote="",hasTough=false;
   if(c){
     const conMod=mod(fa['体质']);
   const mainLv=getMainClassLevels();
@@ -2121,19 +2171,15 @@ function renderSheet(){
   hasTough=(bg&&bg.feat==="健壮")||(S.speciesChoices["人类专长"]==="健壮")||((S.asiChoices||[]).some(ch=>ch&&ch.type==="feat"&&ch.feat==="健壮"));
   if(hasTough) hp+=2*S.level;
   if(sp&&sp.id==="dwarf") hp+=S.level;
-    if(c.id==="barbarian") ac=10+mod(fa['敏捷'])+mod(fa['体质']);
-    else if(c.id==="monk") ac=10+mod(fa['敏捷'])+mod(fa['感知']);
-    else if(c.armor.includes('重甲')) ac=16+2;
-    else if(c.armor.includes('中甲')) ac=14+Math.min(2,mod(fa['敏捷']))+2;
-    else if(c.armor.includes('轻甲')) ac=11+mod(fa['敏捷'])+(c.armor.includes('盾')?2:0);
-    else ac=10+mod(fa['敏捷']);
+    const gearAC=calcGearAC(c,fa,chosenGearText());
+    ac=gearAC.ac; acNote=gearAC.note;
   }
   let classTitle=c?c.name+getMainClassLevels()+'级':'';S.multiclass.forEach(mc=>{const mcCls=CLASSES.find(x=>x.id===mc.classId);if(mcCls)classTitle+='/'+mcCls.name+mc.levels+'级';});
   let html=`<h2>${esc($('ch-name').value)||'无名冒险者'}</h2><div class="sub">${classTitle?classTitle+' · ':''}${sp?sp.name:''}${bg?' · '+bg.name:''}${$('ch-align').value?' · '+esc($('ch-align').value):''} | D&amp;D 2024 · ${S.level}级</div><div>`;
   STATS.forEach((s,i)=>{html+=`<span class="bigstat"><span class="v">${fa[s]}</span><span class="l">${s} ${STAT_EN[i]} (${modStr(fa[s])})</span></span>`;});
   html+=`</div><table>
     <tr><td class="k">生命值(${S.level}级)</td><td><b>${hp}</b> (1级:d${c?c.hd:'?'}+体质${modStr(fa['体质'])}${S.level>1?'; 每级:'+(Math.floor((c?c.hd:8)/2)+1)+'+体质':''})${hasTough?' +'+(2*S.level)+'(健壮)':''}${sp&&sp.id==='dwarf'?' +'+S.level+'(矮人刚毅)':''}</td></tr>
-    <tr><td class="k">护甲等级 AC</td><td><b>${ac}</b>(按起始护甲估算)</td></tr>
+    <tr><td class="k">护甲等级 AC</td><td><b>${ac}</b>(${acNote||'按所选起始装备估算'})</td></tr>
     <tr><td class="k">熟练加值</td><td><b>+${prof}</b></td></tr>
     <tr><td class="k">先攻</td><td><b>${modStr(fa['敏捷'])}</b>(敏捷)${bg&&bg.feat==='警戒'?' +'+prof+'(警戒)':''}</td></tr>
     <tr><td class="k">速度</td><td><b>${effSpeed(sp)}</b>尺</td></tr>
@@ -2180,7 +2226,7 @@ if(curBg()&&curBg().harrowingEvent&&S.harrowingChoice){html+=`\n【悲惨事件�
   if(S.asiChoices&&S.asiChoices.length){const hits=asiLevelsHit();if(hits.length){html+=`\n【属性提升/专长】\n`;S.asiChoices.forEach((ch,i)=>{if(ch&&ch.type){if(ch.type==="asi"){html+=`• ${hits[i]}级:属性提升 +2(${ch.plus2||"未选"}) +1(${ch.plus1||"未选"})\n`;}else if(ch.type==="feat"){html+=`• ${hits[i]}级:专长-${ch.feat||"未选"}${ch.featAttr?" (+1 "+ch.featAttr+")":""}\n`;}else if(ch.type==="epic"){html+=`• ${hits[i]}级:传奇恩惠-${ch.feat||"未选"}${ch.featAttr?" (+1 "+ch.featAttr+")":""}\n`;}}});}}
   if(S.speciesChoices["人类专长"]&&Object.keys(S.featChoices).length){html+=`\n【专长子项】\n`;for(const k in S.featChoices){html+=`• ${k}: ${S.featChoices[k].join('、')}\n`;}}
 html+=`</pre>`;}
-  if(c){html+=`<h3>起始装备</h3><pre>${c.startGear}</pre>`;}
+  if(c){const gos=gearOptions(c);const chosen=S.gearChoice&&gos.find(x=>x.k===S.gearChoice);html+=`<h3>起始装备${chosen?` · 已选 ${chosen.k} 组`:''}</h3><pre>${chosen?chosen.text:c.startGear}</pre>`;}
       // 职业特性选择
   if(S.chosenFightingStyles&&S.chosenFightingStyles.length){html+=`<h3>战斗风格</h3><pre>`;S.chosenFightingStyles.forEach((fs,i)=>{if(fs)html+=`◆ ${fs}\n  ${(FIGHTING_STYLES.find(f=>f.n===fs)||{}).d||''}\n\n`;});html+=`</pre>`;}
   if(S.chosenMetamagic&&S.chosenMetamagic.length){html+=`<h3>超魔法</h3><pre>`;S.chosenMetamagic.forEach(n=>{const mm=METAMAGIC_OPTIONS.find(m=>m.n===n);if(mm)html+=`◆ ${mm.n}(${mm.cost})\n  ${mm.d}\n\n`;});html+=`</pre>`;}
