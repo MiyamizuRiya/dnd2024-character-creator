@@ -16,7 +16,8 @@
   body{font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
     background:radial-gradient(1200px 600px at 20% -10%,#3a2c22 0,var(--bg) 60%) fixed;
     color:var(--ink); line-height:1.6; min-height:100vh}
-  header{background:linear-gradient(180deg,#2a1d12,#15110d);border-bottom:3px solid var(--gold);padding:22px 28px;box-shadow:var(--shadow)}
+  header{background:linear-gradient(180deg,#2a1d12,#15110d);border-bottom:3px solid var(--gold);padding:22px 28px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+  .head-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   header h1{margin:0;font-family:Georgia,serif;color:var(--gold2);font-size:1.9rem;letter-spacing:1px;text-shadow:0 2px 8px #000}
   header p{margin:6px 0 0;color:var(--muted);font-size:.92rem}
   header .ver{display:inline-block;margin-top:6px;padding:2px 10px;background:var(--accent);color:#fff;border-radius:12px;font-size:.72rem;font-weight:600}
@@ -162,8 +163,17 @@
 </head>
 <body>
 <header>
-  <h1>⚔ 冒险者创建指南</h1>
-  <p>基于《龙与地下城》2024 玩家手册(Player's Handbook 2024)<span class="ver">D&amp;D 2024 规则</span></p>
+  <div class="head-main">
+    <h1>⚔ 冒险者创建指南</h1>
+    <p>基于《龙与地下城》2024 玩家手册(Player's Handbook 2024)<span class="ver">D&amp;D 2024 规则</span></p>
+  </div>
+  <div class="head-actions">
+    <button class="btn" style="padding:8px 14px;font-size:.82rem" onclick="openLevelUp()" title="升到下一级:预览将获得的新特性/法术位等,可选择升级已有职业或兼职">⬆ 升级</button>
+    <button class="btn ghost" style="padding:8px 14px;font-size:.82rem" onclick="exportProgress()" title="把当前创建进度导出为 .md 文件(含可读摘要+机器数据)">📤 导出进度</button>
+    <button class="btn ghost" style="padding:8px 14px;font-size:.82rem" onclick="document.getElementById('progressFile').click()" title="从导出的 .md 文件恢复创建进度">📥 导入进度</button>
+    <button class="btn ghost" style="padding:8px 14px;font-size:.82rem;border-color:var(--bad);color:var(--bad)" onclick="confirmReset()" title="清除本地保存的进度,从头开始(存档 7 天后也会自动过期)">🗑 清空记录</button>
+    <input type="file" id="progressFile" accept=".md,.markdown,.json,.txt" hidden onchange="importProgressFile(this)">
+  </div>
 </header>
 <div class="wrap">
   <div class="stepper" id="stepper"></div>
@@ -179,10 +189,7 @@
       <div class="card"><h3>2. 确定起源</h3><ul><li>选背景(给属性+起源专长)</li><li>选种族(给体型/速度/特质)</li><li>身高滑块自动判定体型</li></ul></div>
       <div class="card"><h3>3. 属性·法术·细节</h3><ul><li>生成属性值并用背景加成调整</li><li>施法者选择法术并预览效果</li><li>阵营与角色细节</li></ul></div>
     </div>
-    <div class="nav">
-      <button class="btn ghost" onclick="confirmReset()" style="border-color:var(--bad);color:var(--bad)" title="清除本地保存的上次进度,从头开始创建(7天后也会自动过期)">🗑 清空记录,从头开始</button>
-      <span></span><button class="btn" onclick="go('level')">开始创建 →</button>
-    </div>
+    <div class="nav"><span></span><button class="btn" onclick="go('level')">开始创建 →</button></div>
   </section>
 
   <section class="panel hide" id="step-level">
@@ -2411,6 +2418,235 @@ function resetAll(){
   renderBgBonusUI();renderAsiPick();renderSpeciesChoices();renderSpeciesInfo();
   updateHeightRange();renderProgress();renderAbiStats();
   go('overview');
+}
+
+/* ===== 全局:进度导出/导入 + 升级预览(数据源:玩家手册2024 职业表/CLASS_FEATURES/SUBCLASSES) ===== */
+function renderEverything(){
+  renderStepper();renderClasses();renderBgs();renderSpecies();renderAbi();
+  renderLevelInfo();renderClassInfo();renderSkillPick();renderToolPick();
+  renderSubclassPick();renderClassFeaturesPick();renderBgInfo();renderBgToolPick();
+  renderBgBonusUI();renderAsiPick();renderSpeciesChoices();renderSpeciesInfo();
+  updateHeightRange();renderProgress();renderAbiStats();
+  renderInvocationPick&&renderInvocationPick();
+}
+function applyInputs(inputs){
+  if(!inputs) return;
+  const fields=['ch-name','ch-player','ch-align','ch-gender-age','ch-size','ch-weight','ch-deity','ch-look','ch-backstory','ch-height','char-level','abi-method'];
+  fields.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el&&inputs[id]!==undefined&&inputs[id]!==null){
+      if(el.tagName==='SELECT') el.selectedIndex=inputs[id];
+      else el.value=inputs[id];
+    }
+  });
+  const h=document.getElementById('ch-height'); if(h&&inputs['ch-height']) onHeightChange(inputs['ch-height']);
+}
+function collectInputs(){
+  const inputs={};
+  const fields=['ch-name','ch-player','ch-align','ch-gender-age','ch-size','ch-weight','ch-deity','ch-look','ch-backstory','ch-height','char-level','abi-method'];
+  fields.forEach(id=>{const el=document.getElementById(id);if(el){if(el.tagName==='SELECT')inputs[id]=el.selectedIndex;else inputs[id]=el.value;}});
+  return inputs;
+}
+function charTitle(){
+  const c=curClass(); if(!c) return "未选职业";
+  let t=c.name+getMainClassLevels()+'级';
+  S.multiclass.forEach(mc=>{const m=CLASSES.find(x=>x.id===mc.classId);if(m)t+='/'+m.name+mc.levels+'级';});
+  return t;
+}
+function exportProgress(){
+  const c=curClass();
+  if(!c&&!S.chosenCantrips.length&&!S.chosenSpells.length&&!S.bg&&!S.species){toast("还没有可导出的进度");return;}
+  const now=new Date().toISOString();
+  const data={format:"dnd2024-character/v1",exportedAt:now,S:S,inputs:collectInputs()};
+  const sp=curSpecies(),bg=curBg();
+  const summary=[
+    "- 角色:"+(($("ch-name").value||"（未命名）")),
+    "- 职业/等级:"+charTitle()+"(总等级 "+S.level+")",
+    "- 种族:"+(sp?sp.name:"未选")+" | 背景:"+(bg?bg.name+"("+bg.feat+")":"未选"),
+    "- 已选技能:"+(S.chosenSkills.join("、")||"无")+" | 戏法:"+(S.chosenCantrips.join("、")||"无")+" | 法术:"+(S.chosenSpells.join("、")||"无")
+  ].join("\n");
+  const md=`# DND 2024 角色创建进度 · 导出
+
+${summary}
+
+- 导出时间:${now.slice(0,10)}
+- 把此文件用「📥 导入进度」按钮导入,即可在任一步骤恢复全部选择(等级/职业/子职/属性/法术/装备组/细节等)。
+- 下方 JSON 代码块为机器可读数据,导入时以此为准。
+
+\`\`\`json
+${JSON.stringify(data,null,2)}
+\`\`\`
+`;
+  const blob=new Blob([md],{type:"text/markdown;charset=utf-8"});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=(($("ch-name").value||"冒险者").replace(/[\\/:*?"<>|\s]+/g,"_").slice(0,30))+"-DND2024进度-"+now.slice(0,10)+".md";
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  toast("已导出创建进度");
+}
+function importProgressFile(input){
+  const f=input.files&&input.files[0];
+  input.value="";
+  if(!f) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const text=String(reader.result||"");
+    let jsonText=null;
+    const m=text.match(/^```json[ \t]*\r?\n([\s\S]*?)\r?\n```/m); // 锚定行首,避开正文里提及的围栏字样
+    if(m) jsonText=m[1].trim();
+    else{try{JSON.parse(text);jsonText=text;}catch(e){jsonText=null;}}
+    if(!jsonText){toast("未能识别文件:请用本站「导出进度」生成的 .md");return;}
+    let data;
+    try{data=JSON.parse(jsonText);}catch(e){toast("JSON 解析失败:"+e.message);return;}
+    if(data.format!=="dnd2024-character/v1"||!data.S){toast("这不是角色创建进度文件(格式不符)");return;}
+    if(!confirm("确定导入吗?当前未保存的进度将被覆盖。"))return;
+    Object.assign(S,data.S);
+    applyInputs(data.inputs);
+    renderEverything();
+    go(S.step>=0?STEPS[Math.min(S.step,STEPS.length-1)].id:'overview');
+    saveState();
+    toast("已导入进度:"+charTitle());
+  };
+  reader.onerror=()=>toast("读取文件失败");
+  reader.readAsText(f,"utf-8");
+}
+
+/* ---- 升级预览 ---- */
+function slotsStruct(){
+  const out={};
+  const c=curClass();
+  if(!c||!isSpellcaster()) return out;
+  if((c.id==="fighter"&&S.subClass==="奥法骑士")||(c.id==="rogue"&&S.subClass==="诡术师")){
+    const eff=Math.floor(S.level/3);
+    const s=eff>=1?(FULL_CASTER_SLOTS[eff]||null):null;
+    if(s)for(let i=0;i<4;i++)if(s[i]>0)out[RING_NAMES[i]]=s[i];
+    return out;
+  }
+  const totalCaster=totalCasterLevel();
+  const hasWarlock=(c&&c.id==="warlock")||S.multiclass.some(m=>m.classId==="warlock");
+  if(totalCaster>0){
+    const s=FULL_CASTER_SLOTS[totalCaster];
+    if(s)for(let i=0;i<9;i++)if(s[i]>0)out[RING_NAMES[i]]=s[i];
+  }else if(c&&c.spell&&c.id!=="warlock"&&!hasWarlock){
+    const s=HALF_CASTER_SLOTS[S.level];
+    if(s)for(let i=0;i<5;i++)if(s[i]>0)out[RING_NAMES[i]]=s[i];
+  }
+  if(hasWarlock){
+    let wl=0;
+    if(c&&c.id==="warlock")wl+=getMainClassLevels();
+    S.multiclass.forEach(m=>{if(m.classId==="warlock")wl+=m.levels;});
+    if(wl>0){
+      const w=WARLOCK_SLOTS[wl];
+      if(w)out["魔契师"+RING_NAMES[w.lv-1]]=w.slots;
+      if(WARLOCK_MYSTIC[wl])out["玄奥秘法("+RING_NAMES[WARLOCK_MYSTIC[wl]-1]+")"]=1;
+    }
+  }
+  return out;
+}
+function diffSlots(before,after){
+  const rows=[];
+  Object.keys(after).forEach(k=>{
+    const b=before[k]||0,a=after[k],d=a-b;
+    if(d>0)rows.push(`+${d} ${k}法术位(升后共 ${a} 个)`);
+    else if(d<0)rows.push(`${k}法术位 ${b}→${a}(魔契师位随等级升阶,属正常)`);
+  });
+  return rows;
+}
+function featureRowsAt(classId,subName,atLv){
+  const rows=[];
+  (CLASS_FEATURES[classId]||[]).forEach(f=>{
+    if(f.lv!==atLv)return;
+    if(f.sub){if(subName){const sub=SUBCLASSES[classId]&&SUBCLASSES[classId][subName];(sub?sub.features:[]).forEach(x=>{if(x.lv===atLv)rows.push(`子职·${x.n}:${x.d}`);});}else rows.push("子职特性(先选子职)");}
+    else rows.push(`${f.n}:${(f.d||"").slice(0,60)}…`);
+  });
+  return rows;
+}
+function openLevelUp(){
+  if(!S.cls){toast("请先选择职业");return;}
+  if(S.level>=20){toast("已达 20 级上限");return;}
+  const c=curClass();
+  let body=`<div class="m-meta">当前:<b>${esc(charTitle())}</b>(总等级 ${S.level}) → 升到 <b>${S.level+1}</b> 级。选择升级对象:</div>`;
+  body+=`<div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">`;
+  body+=`<button class="btn" style="text-align:left" onclick="previewLevelUp('main',-1)">⬆ ${esc(c.name)}(主职业 ${getMainClassLevels()}级 → ${getMainClassLevels()+1}级)</button>`;
+  S.multiclass.forEach((mc,i)=>{
+    const m=CLASSES.find(x=>x.id===mc.classId);
+    if(m)body+=`<button class="btn ghost" style="text-align:left" onclick="previewLevelUp('mc',${i})">⬆ ${esc(m.name)}(兼职 ${mc.levels}级 → ${mc.levels+1}级)</button>`;
+  });
+  const canMC=S.level+1>=2&&CLASSES.some(cl=>canMulticlass(cl.id));
+  body+=`<button class="btn ghost" style="text-align:left" ${canMC?"":"disabled"} onclick="openMulticlassPicker()">➕ 兼职一个新职业(总等级 ${S.level+1},新职业 1 级)${canMC?"":" · 当前属性不满足任何兼职要求"}</button>`;
+  body+=`</div>`;
+  if(S.multiclass.length===0&&!canMC)body+=`<p class="note" style="margin-top:10px">提示:2 级起可兼职(需主属性≥13)。</p>`;
+  showModal('<h3>⬆ 升级</h3>',body);
+}
+function openMulticlassPicker(){
+  const list=CLASSES.filter(cl=>canMulticlass(cl.id));
+  let body=`<div class="m-meta">选择要兼职的新职业(获得其兼职熟练项与 1 级特性):</div><div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">`;
+  list.forEach(cl=>{body+=`<button class="btn ghost" style="text-align:left" onclick="previewMulticlass('${cl.id}')">${esc(cl.name)} —— ${esc(MULTICLASS_PROF[cl.id]||"")}</button>`;});
+  body+=`</div>`;
+  showModal('<h3>➕ 兼职新职业</h3>',body);
+}
+function previewMulticlass(classId){
+  const cl=CLASSES.find(x=>x.id===classId);if(!cl)return;
+  const before=JSON.parse(JSON.stringify(S));
+  const beforeSlots=slotsStruct(),beforePrep=spellTotalCount(),beforeCant=spellCantripCount();
+  S.multiclass.push({classId:classId,levels:1,subClass:null});
+  S.level+=1;
+  const afterSlots=slotsStruct(),afterPrep=spellTotalCount(),afterCant=spellCantripCount();
+  const dProf=profByLevel(S.level)-profByLevel(before.level);
+  S=before;
+  let body=`<div class="m-meta">兼职 <b>${esc(cl.name)}</b> 1 级(总等级 ${S.level+1}),将获得:</div>`;
+  body+=`<div class="trait" style="margin-top:10px"><span class="tn">兼职熟练项:</span> ${esc(MULTICLASS_PROF[classId]||"")}</div>`;
+  cl.level1.forEach(t=>{body+=`<div class="trait"><span class="tn">1级特性 · ${esc(String(t).split("(")[0])}</span> ${esc(String(t))}</div>`;});
+  const dS=diffSlots(beforeSlots,afterSlots);
+  if(dS.length){body+=`<div class="trait" style="border-color:var(--gold)"><span class="tn">法术位变化:</span><br>${dS.map(esc).join("<br>")}</div>`;}
+  if(afterPrep!==beforePrep)body+=`<div class="trait"><span class="tn">准备/已知法术:</span> ${beforePrep} → ${afterPrep}(+${afterPrep-beforePrep})</div>`;
+  if(afterCant!==beforeCant)body+=`<div class="trait"><span class="tn">戏法数:</span> ${beforeCant} → ${afterCant}</div>`;
+  if(dProf>0)body+=`<div class="trait"><span class="tn">熟练加值:</span> +${profByLevel(S.level)}(原 +${profByLevel(S.level-1)})</div>`;
+  body+=`<div style="display:flex;gap:10px;margin-top:14px"><button class="btn" onclick="applyLevelUp('newmc','${classId}')">确认兼职</button><button class="btn ghost" onclick="openLevelUp()">返回</button></div>`;
+  showModal('<h3>➕ 兼职预览 · '+esc(cl.name)+'</h3>',body);
+}
+function previewLevelUp(kind,idx){
+  const before=JSON.parse(JSON.stringify(S));
+  const beforeSlots=slotsStruct(),beforePrep=spellTotalCount(),beforeCant=spellCantripCount();
+  let beforeInv=0;try{beforeInv=warlockInvocationCount();}catch(e){}
+  const c=kind==='main'?curClass():CLASSES.find(x=>x.id===S.multiclass[idx].classId);
+  const subName=kind==='main'?S.subClass:S.multiclass[idx].subClass;
+  const oldClassLv=kind==='main'?getMainClassLevels():S.multiclass[idx].levels;
+  const newClassLv=oldClassLv+1;
+  if(kind==='main'){S.level+=1;}
+  else{S.level+=1;S.multiclass[idx].levels+=1;}
+  const afterSlots=slotsStruct(),afterPrep=spellTotalCount(),afterCant=spellCantripCount();
+  let afterInv=0;try{afterInv=warlockInvocationCount();}catch(e){}
+  const dProf=profByLevel(S.level)-profByLevel(before.level);
+  const classId=c.id;
+  S=before;
+  let body=`<div class="m-meta"><b>${esc(c.name)}</b> ${oldClassLv}级 → <b>${newClassLv}级</b>(总等级 ${S.level+1}),将获得:</div>`;
+  const feats=featureRowsAt(classId,subName,newClassLv);
+  if(feats.length)feats.forEach(t=>body+=`<div class="trait" style="margin-top:8px"><span class="tn">◆ ${esc(t.split(":")[0])}</span>${esc(t.includes(":")?":"+t.split(":").slice(1).join(":"):"")}</div>`);
+  else body+=`<div class="trait" style="margin-top:8px">本级无新职业特性(常见于空级行)。</div>`;
+  if((ASI_LEVELS[classId]||[]).includes(newClassLv))body+=`<div class="trait" style="border-color:var(--gold)"><span class="tn">属性值提升/专长</span> ${newClassLv===19?"(19 级为传奇恩惠)":""}——到「属性」步骤选择 +2/+1 或一项专长</div>`;
+  const dS=diffSlots(beforeSlots,afterSlots);
+  if(dS.length){body+=`<div class="trait" style="border-color:var(--gold);margin-top:8px"><span class="tn">法术位:</span><br>${dS.map(esc).join("<br>")}</div>`;}
+  if(afterPrep!==beforePrep)body+=`<div class="trait"><span class="tn">准备/已知法术:</span> ${beforePrep} 个 → ${afterPrep} 个(+${afterPrep-beforePrep},到「法术」步骤补选)</div>`;
+  if(afterCant!==beforeCant)body+=`<div class="trait"><span class="tn">戏法:</span> ${beforeCant} 个 → ${afterCant} 个(+${afterCant-beforeCant})</div>`;
+  if(afterInv!==beforeInv)body+=`<div class="trait"><span class="tn">魔能祈唤:</span> ${beforeInv} 个 → ${afterInv} 个(+${afterInv-beforeInv})</div>`;
+  if(dProf>0)body+=`<div class="trait"><span class="tn">熟练加值:</span> +${profByLevel(S.level-1)} → +${profByLevel(S.level)}</div>`;
+  if(newClassLv===3&&!subName)body+=`<p class="note" style="margin-top:8px">⚠ 3 级解锁子职,升级后请到「职业」步骤选择。</p>`;
+  body+=`<div style="display:flex;gap:10px;margin-top:14px"><button class="btn" onclick="applyLevelUp('${kind}',${idx})">确认升级到 ${S.level+1} 级</button><button class="btn ghost" onclick="openLevelUp()">返回</button></div>`;
+  showModal('<h3>⬆ 升级预览 · '+esc(c.name)+'</h3>',body);
+}
+function applyLevelUp(kind,arg){
+  if(kind==='newmc'){S.multiclass.push({classId:arg,levels:1,subClass:null});}
+  else if(kind==='main'){/* 主职业级数=总级-兼职总数,自动 +1 */}
+  else if(kind==='mc'){S.multiclass[arg].levels+=1;}
+  S.level+=1;
+  const lvEl=document.getElementById('char-level');if(lvEl)lvEl.value=S.level;
+  // 升级可能解锁子职/专长/新环法术:清掉越界的已选法术提示(保留选择,由上限计数自然约束)
+  renderEverything();
+  if(STEPS[S.step]&&STEPS[S.step].id==='sheet')renderSheet();
+  saveState();
+  closeModal();
+  toast("已升级:"+charTitle()+"(总等级 "+S.level+")"+((S.level===3&&!S.subClass)?" · 记得选子职":""));
+  if(S.level===3&&!S.subClass)go('class');
 }
 
 /* ===== INIT ===== */
