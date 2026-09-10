@@ -179,7 +179,10 @@
       <div class="card"><h3>2. 确定起源</h3><ul><li>选背景(给属性+起源专长)</li><li>选种族(给体型/速度/特质)</li><li>身高滑块自动判定体型</li></ul></div>
       <div class="card"><h3>3. 属性·法术·细节</h3><ul><li>生成属性值并用背景加成调整</li><li>施法者选择法术并预览效果</li><li>阵营与角色细节</li></ul></div>
     </div>
-    <div class="nav"><span></span><button class="btn" onclick="go('level')">开始创建 →</button></div>
+    <div class="nav">
+      <button class="btn ghost" onclick="confirmReset()" style="border-color:var(--bad);color:var(--bad)" title="清除本地保存的上次进度,从头开始创建(7天后也会自动过期)">🗑 清空记录,从头开始</button>
+      <span></span><button class="btn" onclick="go('level')">开始创建 →</button>
+    </div>
   </section>
 
   <section class="panel hide" id="step-level">
@@ -372,7 +375,7 @@ const SPECIES=[
 
 const CLASSES=[
   {id:"barbarian",name:"野蛮人",en:"Barbarian",hd:12,hdLabel:"极多",primary:"力量",save:["力量","体质"],armor:"轻甲、中甲、盾牌",weapons:"简易和军用武器",skills:["驯兽","运动","威吓","自然","察觉","求生"],nSkills:2,spell:false,startGear:"(A)巨斧,4把手斧,探索套组,15GP;或(B)75GP",level1:["狂暴(附赠动作进入,近战力量攻击+狂暴伤害,抗钝击/穿刺/挥砍;不能施法/专注。次数2)","无甲防御(无甲时AC=10+敏捷+体质)","武器精通(2种简易/军用近战武器精通词条)"],subs:["狂战士道途","兽心道途","世界树道途","狂热者道途"]},
-  {id:"bard",name:"吟游诗人",en:"Bard",hd:8,hdLabel:"中等",primary:"魅力",save:["敏捷","魅力"],armor:"轻甲",weapons:"简易武器",tools:"任选3项乐器",skills:"任意",nSkills:3,spell:true,spellStat:"魅力",cantripsKnown:2,spellsKnown:4,slotsL1:2,startGear:"(A)皮甲,2匕首,乐器,艺人套组,19GP;或(B)90GP",level1:["吟游诗人激励(D6骰,1/短休后随等级提升)","施法(魅力)","(2级获专精与万事通)"],subs:["舞蹈学院","魅心学院","逸闻学院","勇气学院"]},
+  {id:"bard",name:"吟游诗人",en:"Bard",hd:8,hdLabel:"中等",primary:"魅力",save:["敏捷","魅力"],armor:"轻甲",weapons:"简易武器",tools:"任选3项乐器",skills:"任意",nSkills:3,spell:true,spellStat:"魅力",cantripsKnown:2,prepSpells:4,slotsL1:2,startGear:"(A)皮甲,2匕首,乐器,艺人套组,19GP;或(B)90GP",level1:["吟游诗人激励(D6骰,1/短休后随等级提升)","施法(魅力,准备制:魅力调整值+等级,每日可换)","(2级获专精与万事通)"],subs:["舞蹈学院","魅心学院","逸闻学院","勇气学院"]},
   {id:"cleric",name:"牧师",en:"Cleric",hd:8,hdLabel:"中等",primary:"感知",save:["感知","魅力"],armor:"轻甲、中甲、盾牌",weapons:"简易武器",skills:["历史","洞悉","医药","游说","宗教"],nSkills:2,spell:true,spellStat:"感知",cantripsKnown:3,prepSpells:4,slotsL1:2,startGear:"(A)链甲衫,盾,硬头锤,圣徽,祭司套组,7GP;或(B)110GP",level1:["施法(感知,可准备法术)","圣职(1级选神祇领域方向)"],subs:["生命领域","光明领域","诡术领域","战争领域"]},
   {id:"druid",name:"德鲁伊",en:"Druid",hd:8,hdLabel:"中等",primary:"感知",save:["智力","感知"],armor:"轻甲、盾牌(非金属)",weapons:"简易武器",tools:"草药工具",skills:["奥秘","驯兽","洞悉","医药","自然","察觉","宗教","求生"],nSkills:2,spell:true,spellStat:"感知",cantripsKnown:2,prepSpells:4,slotsL1:2,startGear:"(A)皮甲,盾,镰刀,德鲁伊法器(长棍),探索套组,草药工具,9GP;或(B)50GP",level1:["德鲁伊语(专属文字)","原初职能","施法(感知,可准备法术)","(2级获荒野变形)"],subs:["大地结社","月亮结社","海洋结社","星辰结社"]},
   {id:"fighter",name:"战士",en:"Fighter",hd:10,hdLabel:"多",primary:"力量或敏捷",save:["力量","体质"],armor:"轻甲、中甲、重甲、盾牌",weapons:"简易和军用武器",skills:["特技","驯兽","运动","历史","洞悉","威吓","游说","察觉","求生"],nSkills:2,spell:false,startGear:"(A)链甲,巨剑,链枷,8标枪,地城套组,4GP;(B)镶钉皮甲,弯刀,短剑,长弓,20箭,地城套组,11GP;或(C)155GP",level1:["战斗风格(获一项战斗风格专长,推荐防御)","回气(附赠动作恢复1d10+战士等级HP,2次)","武器精通(3种简易/军用武器精通词条)"],subs:["战斗大师","勇士","奥法骑士","灵能武士"]},
@@ -380,7 +383,7 @@ const CLASSES=[
   {id:"paladin",name:"圣武士",en:"Paladin",hd:10,hdLabel:"多",primary:"力量与魅力",save:["感知","魅力"],armor:"轻甲、中甲、重甲、盾牌",weapons:"简易和军用武器",skills:["运动","洞悉","威吓","医药","游说","宗教"],nSkills:2,spell:true,spellStat:"魅力",prepSpells:2,slotsL1:2,startGear:"(A)链甲,盾,长剑,6标枪,圣徽,祭司套组,9GP;或(B)150GP",level1:["圣疗(治疗池=5×圣武士等级,附赠动作触碰治疗)","施法(魅力)","武器精通(2种武器精通词条)"],subs:["奉献之誓","荣耀之誓","古贤之誓","复仇之誓"]},
   {id:"ranger",name:"游侠",en:"Ranger",hd:10,hdLabel:"多",primary:"敏捷与感知",save:["力量","敏捷"],armor:"轻甲、中甲、盾牌",weapons:"简易和军用武器",skills:["驯兽","运动","洞悉","调查","自然","察觉","隐匿","求生"],nSkills:3,spell:true,spellStat:"感知",prepSpells:2,slotsL1:2,startGear:"(A)镶钉皮甲,弯刀,短剑,长弓,20箭,箭袋,德鲁伊法器,探索套组,7GP;或(B)150GP",level1:["施法(感知)","宿敌(2个)","武器精通(2种武器精通词条)"],subs:["驯兽师","妖精漫游者","幽域追猎者","猎人"]},
   {id:"rogue",name:"游荡者",en:"Rogue",hd:8,hdLabel:"中等",primary:"敏捷",save:["敏捷","智力"],armor:"轻甲",weapons:"简易武器和具灵巧或轻型词条的军用武器",tools:"盗贼工具",skills:["特技","运动","欺瞒","洞悉","威吓","调查","察觉","游说","巧手","隐匿"],nSkills:4,spell:false,startGear:"(A)皮甲,2匕首,短剑,短弓,20箭,箭袋,盗贼工具,窃贼套组,8GP;或(B)100GP",level1:["专精(2项已熟练技能翻倍,推荐巧手与隐匿)","偷袭(1d6,每回合一次)","盗贼黑话","武器精通(2种武器精通词条)"],subs:["诡术师","刺客","魂刃","盗贼"]},
-  {id:"sorcerer",name:"术士",en:"Sorcerer",hd:6,hdLabel:"少",primary:"魅力",save:["体质","魅力"],armor:"无",weapons:"简易武器",skills:["奥秘","欺瞒","洞悉","威吓","游说","宗教"],nSkills:2,spell:true,spellStat:"魅力",cantripsKnown:4,spellsKnown:2,slotsL1:2,startGear:"(A)矛,2匕首,奥术法器(水晶),地城套组,28GP;或(B)50GP",level1:["施法(魅力)","先天术法(1级选术法起源,2级起超魔法与术法点)"],subs:["畸变术法","时械术法","龙族术法","狂野术法"]},
+  {id:"sorcerer",name:"术士",en:"Sorcerer",hd:6,hdLabel:"少",primary:"魅力",save:["体质","魅力"],armor:"无",weapons:"简易武器",skills:["奥秘","欺瞒","洞悉","威吓","游说","宗教"],nSkills:2,spell:true,spellStat:"魅力",cantripsKnown:4,prepSpells:2,slotsL1:2,startGear:"(A)矛,2匕首,奥术法器(水晶),地城套组,28GP;或(B)50GP",level1:["施法(魅力,准备制:魅力调整值+等级,每日可换)","先天术法(1级选术法起源,2级起超魔法与术法点)"],subs:["畸变术法","时械术法","龙族术法","狂野术法"]},
   {id:"warlock",name:"魔契师",en:"Warlock",hd:8,hdLabel:"中等",primary:"魅力",save:["感知","魅力"],armor:"轻甲",weapons:"简易武器",skills:["奥秘","欺瞒","历史","威吓","调查","自然","宗教"],nSkills:2,spell:true,spellStat:"魅力",cantripsKnown:2,spellsKnown:2,slotsL1:1,slotRecovers:"短休",startGear:"(A)皮甲,镰刀,2匕首,奥术法器(法球),书(隐秘学识),学者套组,15GP;或(B)100GP",level1:["魔能祈唤(1个自选,如书之魔契)","契约魔法(魅力,法术位短休恢复)"],subs:["至高妖精宗主","天界宗主","邪魔宗主","旧日支配者宗主"]},
   {id:"wizard",name:"法师",en:"Wizard",hd:6,hdLabel:"少",primary:"智力",save:["智力","感知"],armor:"无",weapons:"简易武器",skills:["奥秘","历史","洞悉","调查","医药","自然","宗教"],nSkills:2,spell:true,spellStat:"智力",cantripsKnown:3,spellbookL1:6,slotsL1:2,startGear:"(A)2匕首,奥术法器(长棍),长袍,法术书,学者套组,5GP;或(B)55GP",level1:["施法(智力,法术书)","仪式学家(可仪式施法)","奥术回想(1/长休恢复部分法术位)"],subs:["防护师","预言师","塑能师","幻术师"]}
 ];
@@ -448,9 +451,9 @@ const FULL_CASTER_SLOTS={
 13:[4,3,3,3,2,1,1,0,0],14:[4,3,3,3,2,1,1,0,0],15:[4,3,3,3,2,1,1,1,0],16:[4,3,3,3,2,1,1,1,0],
 17:[4,3,3,3,2,1,1,1,1],18:[4,3,3,3,3,1,1,1,1],19:[4,3,3,3,3,2,1,1,1],20:[4,3,3,3,3,2,2,1,1]
 };
-// 半施法者法术位表(圣武士/游侠):[1环,2环,3环,4环,5环]
+// 半施法者法术位表(圣武士/游侠,2024:1级即有施法,2个一环位):[1环,2环,3环,4环,5环]
 const HALF_CASTER_SLOTS={
-1:[0,0,0,0,0],2:[2,0,0,0,0],3:[3,0,0,0,0],4:[3,0,0,0,0],5:[4,2,0,0,0],6:[4,2,0,0,0],
+1:[2,0,0,0,0],2:[2,0,0,0,0],3:[3,0,0,0,0],4:[3,0,0,0,0],5:[4,2,0,0,0],6:[4,2,0,0,0],
 7:[4,3,0,0,0],8:[4,3,0,0,0],9:[4,3,2,0,0],10:[4,3,2,0,0],11:[4,3,3,0,0],12:[4,3,3,0,0],
 13:[4,3,3,1,0],14:[4,3,3,1,0],15:[4,3,3,2,0],16:[4,3,3,2,0],17:[4,3,3,3,1],18:[4,3,3,3,1],
 19:[4,3,3,3,2],20:[4,3,3,3,2]
@@ -490,7 +493,7 @@ function prepSpellsCount(classId,lv,spellMod){
   return 0; // 已知法术职业用另一套
 }
 
-// 已知法术数量(吟游诗人/术士/魔契师,按表格)
+// 已知法术数量(仅魔契师;2024 吟游诗人/术士已改准备制=施法属性调整值+等级)
 const KNOWN_SPELLS={
 bard:{1:4,2:5,3:6,4:7,5:9,6:10,7:11,8:12,9:14,10:15,11:16,12:16,13:17,14:17,15:18,16:18,17:19,18:20,19:21,20:22},
 sorcerer:{1:2,2:4,3:6,4:7,5:9,6:10,7:11,8:12,9:14,10:15,11:16,12:16,13:17,14:17,15:18,16:18,17:19,18:20,19:21,20:22},
@@ -507,8 +510,8 @@ function maxSpellLevelByClass(classId,lv){
     if(lv<=10)return 5;if(lv<=12)return 6;if(lv<=14)return 7;if(lv<=16)return 8;return 9;
   }
   if(["paladin","ranger"].includes(classId)){
-    // 半施法者:1-2级无,3-4级1环,5级2环,9级3环,13级4环,17级5环
-    if(lv<=2)return 0;if(lv<=4)return 1;if(lv<=8)return 2;if(lv<=12)return 3;if(lv<=16)return 4;return 5;
+    // 半施法者(2024:1级即施法):1-4级1环,5级2环,9级3环,13级4环,17级5环
+    if(lv<=4)return 1;if(lv<=8)return 2;if(lv<=12)return 3;if(lv<=16)return 4;return 5;
   }
   if(classId==="warlock"){
     const w=WARLOCK_SLOTS[lv];return w?w.lv:1;
@@ -1792,8 +1795,10 @@ function setAsiFeatAttr(i,v){
   renderAbiStats();
 }
 function showFeatDetailByName(name,type){
-  const list=type==='epic'?EPIC_BOON_FEATS:GENERAL_FEATS;
-  const f=list.find(x=>x.n===name);
+  // 依次查起源/传奇/一般专长表:起源专长名带英文后缀(如「警戒 Alert」),与一般表(「警戒」)不同名,须逐表找
+  const lists=type==='epic'?[EPIC_BOON_FEATS,ORIGIN_FEATS]:[ORIGIN_FEATS,GENERAL_FEATS,EPIC_BOON_FEATS];
+  let f=null;
+  for(const L of lists){ f=L.find(x=>x.n===name); if(f) break; }
   if(!f)return;
   showModal('<h3>'+esc(f.n)+'</h3>','<div class="m-desc">'+esc(f.d)+'</div>');
 }
@@ -1917,7 +1922,7 @@ function spellTotalCount(){
   if(c.prepSpells){
     const fa=finalAbi();
     const sm=mod(fa[c.spellStat]);
-    return sm+lv;
+    return Math.max(1,sm+lv); // 2024 准备制:施法属性调整值+等级,至少 1
   }
   return 0;
 }
@@ -2311,14 +2316,21 @@ function saveState(){
       }
     });
     state.inputs=inputs;
+    state.savedAt=Date.now();
     localStorage.setItem('dnd2024_char', JSON.stringify(state));
   }catch(e){}
 }
+// 记忆有效期:7 天后自动清除,避免陈旧选择干扰新角色
+const STATE_TTL_MS=7*24*60*60*1000;
 function loadState(){
   try{
     const raw=localStorage.getItem('dnd2024_char');
     if(!raw) return false;
     const state=JSON.parse(raw);
+    if(state.savedAt && Date.now()-state.savedAt>STATE_TTL_MS){
+      localStorage.removeItem('dnd2024_char');
+      return false; // 已过期,当作无记录
+    }
     if(state.S){
       Object.assign(S, state.S);
     }
@@ -2358,6 +2370,7 @@ function resetAll(){
   S.bg=null;
   S.species=null;
   S.subClass=null;
+  S.gearChoice=null;
   S.asiChoices=[];
   S.multiclass=[];
   S.chosenSkills=[];
