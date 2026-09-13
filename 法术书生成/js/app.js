@@ -595,6 +595,19 @@ ${json}
 
     $("#exportBtn").addEventListener("click", exportSelection);
     $("#importBtn").addEventListener("click", () => $("#importFile").click());
+    // 角色卡法术代码(DND1:<base36 索引,…>,基于与人物卡共用的同一份 391 条数据)
+    $("#charCodeBtn").addEventListener("click", () => {
+      const raw = prompt("粘贴角色卡「法术总览」生成的法术卡代码(以 DND1: 开头):");
+      if (!raw) return;
+      const m = String(raw).trim().match(/^DND1:([0-9a-zA-Z,]+)$/);
+      if (!m) { showToast("代码格式不对:应以 DND1: 开头(在人物卡完成角色页复制)"); return; }
+      const idxs = m[1].split(",").map(x => parseInt(x, 36)).filter(x => x >= 0 && x < SPELLS.length);
+      if (!idxs.length) { showToast("代码里没有有效法术"); return; }
+      let added = 0;
+      idxs.forEach(i => { const s = SPELLS[i]; if (s && !state.selSet.has(s.id)) { state.selSet.add(s.id); state.selOrder.push(s.id); added++; } });
+      renderList(); renderPreview(); renderSummary();
+      showToast(`已从代码放入 ${added} 个法术` + (idxs.length - added ? `(跳过已选 ${idxs.length - added} 个)` : "") + ",可拖动调整顺序");
+    });
     $("#importFile").addEventListener("change", (e) => {
       const f = e.target.files && e.target.files[0];
       if (f) importFromFile(f);
