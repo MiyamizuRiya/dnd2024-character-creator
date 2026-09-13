@@ -2738,7 +2738,7 @@ function grantedSpells(){
   if(sp.id==='elf'){var b=S.speciesChoices['精灵血系'];
     if(b==='卓尔'){out.push('舞光术');if(lv>=3)out.push('妖火');if(lv>=5)out.push('黑暗术');}
     else if(b==='高等精灵'){out.push('魔法伎俩');if(lv>=3)out.push('侦测魔法');if(lv>=5)out.push('迷踪步');}
-    else if(b==='木精灵'){if(lv>=3)out.push('大步奔行');if(lv>=5)out.push('行动无踪');}
+    else if(b==='木精灵'){out.push('德鲁伊伎俩');if(lv>=3)out.push('大步奔行');if(lv>=5)out.push('行动无踪');}
   }
   if(sp.id==='gnome'){var g=S.speciesChoices['侏儒血系'];
     if(g==='森林侏儒'){out.push('次级幻象');out.push('动物交谈');}
