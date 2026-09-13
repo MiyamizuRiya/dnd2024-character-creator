@@ -22,10 +22,8 @@
       <input id="charName" type="text" placeholder="角色名（可选）" title="可选；导出时文件名会带上角色名" maxlength="40">
     </div>
     <div class="actions">
-      <input type="file" id="importFile" accept=".md,.markdown,.json,.txt" hidden>
-      <button type="button" id="charCodeBtn" class="btn btn-ghost" title="粘贴角色卡「法术总览」生成的 DND1 代码,自动放入对应法术">🧙 角色法术代码</button>
-      <button type="button" id="importBtn" class="btn btn-ghost" title="从文件导入已选法术与排序">📥 导入</button>
-      <button type="button" id="exportBtn" class="btn btn-ghost" title="导出已选法术为可分享文件">📤 导出</button>
+      <button type="button" id="importBtn" class="btn btn-ghost" title="粘贴 DND1 代码(本站导出或角色卡「法术总览」生成),自动放入对应法术">📥 导入代码</button>
+      <button type="button" id="exportBtn" class="btn btn-ghost" title="把已选法术生成 DND1 字母代码,可复制保存或回导">📤 导出代码</button>
       <button type="button" id="clearBtn" class="btn btn-ghost" title="清空所有已选">清空</button>
       <button type="button" id="printBtn" class="btn btn-primary" title="打印或保存为 PDF">🖨 打印为 PDF</button>
     </div>

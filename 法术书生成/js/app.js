@@ -413,93 +413,50 @@
     globalThis.__toastT = setTimeout(() => t.classList.remove("show"), 2800);
   }
 
-  // 导出：markdown（人/AI 可读列表 + 内嵌 JSON），导入时以此为准
+  // 导出:生成 DND1 字母数字代码(base36 索引,与人物卡同一编码;含当前排序)
   function exportSelection() {
     const sel = state.selOrder.map(id => byId[id]).filter(Boolean);
     if (!sel.length) { showToast("尚未选择任何法术，无法导出。"); return; }
-    const now = new Date().toISOString();
-    const date = now.slice(0, 10);
-    const charName = ($("#charName").value || "").trim();
-    const safeName = charName.replace(/[\\/:*?"<>|\s]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40);
-    const fileBase = `dnd5r-法术卡-${safeName ? safeName + "-" : ""}${date}`;
-    const data = {
-      format: "dnd5r-spellcards/v1",
-      exportedAt: now,
-      character: charName,
-      source: "玩家手册2024",
-      sourceCount: SPELLS.length,
-      count: sel.length,
-      spells: sel.map(s => ({ id: s.id, nameZh: s.nameZh, nameEn: s.nameEn, level: s.level, school: s.school })),
-      slots: state.selOrder.map(id => state.slotHints[id] || null), // 手动槽位(与 spells 平行,按序对应)
-    };
-    const json = JSON.stringify(data, null, 2);
-    const list = sel.map((s, i) => `${i + 1}. **${s.nameZh}**｜${s.nameEn}　${LEVEL_LABELS[s.level]}·${s.school}`).join("\n");
-    const md =
-`# DND 5r 法术卡 · 已选法术导出
-
-- 共 **${sel.length}** 个法术
-- 角色：${charName || "（未命名）"}
-- 导出时间：${date}
-- 数据来源：玩家手册2024（${SPELLS.length} 条）
-
-## 已选法术（按当前排序）
-
-${list}
-
-> 把此文件拖回网站「导入」按钮即可恢复选择与排序。下方为机器可读数据，导入时以此为准。
-
-\`\`\`json
-${json}
-\`\`\`
-`;
-    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${fileBase}.md`;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    showToast(`已导出 ${sel.length} 个法术 → ${fileBase}.md`);
+    const code = "DND1:" + state.selOrder.map(id => SPELLS.findIndex(s => s.id === id)).filter(i => i >= 0).map(i => i.toString(36)).join(",");
+    showCodeModal(code, sel.length);
   }
-
-  // 导入：解析 .md（取 ```json 块）或纯 .json；按 id 恢复选择与排序（id 失效则按名称回退）
-  function importFromFile(file) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = String(reader.result || "");
-      let jsonText = null;
-      const m = text.match(/```json\s*([\s\S]*?)```/);
-      if (m) jsonText = m[1].trim();
-      else { try { JSON.parse(text); jsonText = text; } catch (e) { jsonText = null; } }
-      if (!jsonText) { showToast("未能识别文件：请用本站导出的 .md / .json。"); return; }
-      let data;
-      try { data = JSON.parse(jsonText); }
-      catch (e) { showToast("JSON 解析失败：" + e.message); return; }
-      let entries = [];
-      if (Array.isArray(data.spells)) entries = data.spells;
-      else if (Array.isArray(data.selOrder)) entries = data.selOrder.map(id => ({ id }));
-      else if (Array.isArray(data)) entries = data;
-      const newOrder = []; const newSet = new Set(); let missing = 0;
-      for (const e of entries) {
-        const id = typeof e === "string" ? e : e.id;
-        let spell = null;
-        if (id && byId[id]) spell = byId[id];
-        else if (e && e.nameZh) spell = SPELLS.find(s => s.nameZh === e.nameZh);
-        else if (e && e.nameEn) spell = SPELLS.find(s => s.nameEn === e.nameEn);
-        if (spell) { if (!newSet.has(spell.id)) { newSet.add(spell.id); newOrder.push(spell.id); } }
-        else missing++;
-      }
-      state.selSet = newSet; state.selOrder = newOrder; state.openDetails = new Set();
-      // 恢复手动槽位(与 spells 数组平行;只保留仍存在的)
-      state.slotHints = {};
-      if (Array.isArray(data.slots)) {
-        newOrder.forEach((id, i) => { const h = data.slots[i]; if (h && typeof h.page === "number") state.slotHints[id] = { page: h.page, row: h.row, col: h.col }; });
-      }
-      if (data.character != null) { const cn = $("#charName"); if (cn) cn.value = data.character; }
-      renderList(); renderPreview(); renderSummary();
-      showToast(`已导入 ${newOrder.length} 个法术${missing ? `，${missing} 个未匹配已跳过` : ""}。`);
-    };
-    reader.onerror = () => showToast("读取文件失败。");
-    reader.readAsText(file, "utf-8");
+  // 代码展示弹窗(复制/关闭)
+  function showCodeModal(code, count) {
+    let ov = document.getElementById("__codeOverlay");
+    if (ov) ov.remove();
+    ov = document.createElement("div");
+    ov.id = "__codeOverlay";
+    ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px";
+    ov.innerHTML = `<div style="background:var(--panel);border:1px solid var(--gold-dk);border-radius:12px;max-width:560px;width:100%;box-shadow:0 8px 28px rgba(0,0,0,.4);padding:20px;font-family:inherit">
+      <h3 style="margin:0 0 8px;color:var(--gold-dk);font-family:var(--serif);font-size:1.15rem">📤 法术卡代码(${count} 个法术,按当前排序)</h3>
+      <p style="margin:0 0 10px;font-size:12px;color:var(--ink-soft)">复制保存;下次用「📥 导入代码」粘贴即可恢复选择与排序;也可粘贴到其他工具/发给队友。</p>
+      <textarea readonly style="width:100%;height:84px;resize:vertical;font-family:monospace;font-size:12px;border:1px solid var(--line-strong);border-radius:8px;background:#fffdf5;color:var(--ink);padding:8px" onclick="this.select()">${code}</textarea>
+      <div style="display:flex;gap:10px;margin-top:12px;justify-content:flex-end">
+        <button type="button" id="__codeCopy" class="btn btn-primary" style="border:none;cursor:pointer;border-radius:8px;padding:8px 16px;font-family:inherit;background:linear-gradient(180deg,#e3c057,#c9a227);color:#2a190d;font-weight:700">📋 复制</button>
+        <button type="button" id="__codeClose" class="btn" style="border:1px solid var(--line-strong);cursor:pointer;border-radius:8px;padding:8px 16px;font-family:inherit;background:transparent;color:var(--ink-soft)">关闭</button>
+      </div></div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener("click", e => { if (e.target === ov) ov.remove(); });
+    ov.querySelector("#__codeClose").addEventListener("click", () => ov.remove());
+    ov.querySelector("#__codeCopy").addEventListener("click", () => {
+      const ta = ov.querySelector("textarea");
+      const done = () => showToast("已复制 " + count + " 个法术的代码");
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, () => { ta.select(); done(); });
+      else { ta.select(); try { document.execCommand("copy"); } catch (e) {} done(); }
+    });
+  }
+  // 导入:粘贴 DND1 代码 → 按序放入法术(已选跳过)
+  function importFromCode() {
+    const raw = prompt("粘贴 DND1 代码(本站「📤 导出代码」或角色卡「法术总览」生成,以 DND1: 开头):");
+    if (!raw) return;
+    const m = String(raw).trim().match(/^DND1:([0-9a-zA-Z,]+)$/);
+    if (!m) { showToast("代码格式不对:应以 DND1: 开头"); return; }
+    const idxs = m[1].split(",").map(x => parseInt(x, 36)).filter(x => x >= 0 && x < SPELLS.length);
+    if (!idxs.length) { showToast("代码里没有有效法术"); return; }
+    let added = 0;
+    idxs.forEach(i => { const s = SPELLS[i]; if (s && !state.selSet.has(s.id)) { state.selSet.add(s.id); state.selOrder.push(s.id); added++; } });
+    renderList(); renderPreview(); renderSummary();
+    showToast(`已从代码放入 ${added} 个法术` + (idxs.length - added ? `(跳过已选 ${idxs.length - added} 个)` : "") + ",可拖动调整顺序");
   }
 
   // ---------- 选择 / 详情 ----------
@@ -594,25 +551,8 @@ ${json}
     $("#printBtn").addEventListener("click", () => window.print());
 
     $("#exportBtn").addEventListener("click", exportSelection);
-    $("#importBtn").addEventListener("click", () => $("#importFile").click());
-    // 角色卡法术代码(DND1:<base36 索引,…>,基于与人物卡共用的同一份 391 条数据)
-    $("#charCodeBtn").addEventListener("click", () => {
-      const raw = prompt("粘贴角色卡「法术总览」生成的法术卡代码(以 DND1: 开头):");
-      if (!raw) return;
-      const m = String(raw).trim().match(/^DND1:([0-9a-zA-Z,]+)$/);
-      if (!m) { showToast("代码格式不对:应以 DND1: 开头(在人物卡完成角色页复制)"); return; }
-      const idxs = m[1].split(",").map(x => parseInt(x, 36)).filter(x => x >= 0 && x < SPELLS.length);
-      if (!idxs.length) { showToast("代码里没有有效法术"); return; }
-      let added = 0;
-      idxs.forEach(i => { const s = SPELLS[i]; if (s && !state.selSet.has(s.id)) { state.selSet.add(s.id); state.selOrder.push(s.id); added++; } });
-      renderList(); renderPreview(); renderSummary();
-      showToast(`已从代码放入 ${added} 个法术` + (idxs.length - added ? `(跳过已选 ${idxs.length - added} 个)` : "") + ",可拖动调整顺序");
-    });
-    $("#importFile").addEventListener("change", (e) => {
-      const f = e.target.files && e.target.files[0];
-      if (f) importFromFile(f);
-      e.target.value = "";
-    });
+    // 导入/导出统一为 DND1 字母代码(与人物卡同一编码;旧 .md 文件导入已移除)
+    $("#importBtn").addEventListener("click", importFromCode);
 
     $("#pageSize").addEventListener("change", (e) => { setPageSize(e.target.value); renderPreview(); renderSummary(); });
     $("#rowsPerPage").addEventListener("change", (e) => {
