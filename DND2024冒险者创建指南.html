@@ -156,7 +156,7 @@
      .spell-list{max-height:none!important;overflow:visible!important}
      .step{display:none!important}
      /* 角色卡只打印 .sheet 本体:步骤标题/提示/按钮区全部隐藏 */
-     #step-sheet>h2,#step-sheet>.hint,.sheet-actions-top{display:none!important}
+     #step-sheet>h2,#step-sheet>.hint,.sheet-actions-top,.sheet .btn{display:none!important}
    }
   @page{margin:12mm}
 </style>
@@ -2217,20 +2217,7 @@ function renderSheet(){
     if(c.tools) html+=`工具熟练: ${c.tools}${S.toolChoices.length?' → '+S.toolChoices.join('、'):''}\n`;
     const sl=c.skills==="任意"?"任意三项":c.skills.join("、")+"(选"+c.nSkills+")";
     html+=`技能熟练(职业): ${sl}\n已选技能: ${S.chosenSkills.join("、")||"(未选)"}\n`;
-    if(isSpellcaster()){
-      const spellStat=c.spellStat||"智力";
-      const spellAbi=fa[spellStat];
-      const spellMod=mod(spellAbi);
-      const spellDC=8+prof+spellMod;
-      const spellAtk=prof+spellMod;
-      html+=`\n施法属性: ${c.spellStat}(${spellAbi},调整值${spellMod>=0?"+":""}${spellMod})\n`;
-      html+=`法术豁免DC: ${spellDC} | 法术攻击命中: ${spellAtk>=0?"+":""}${spellAtk}\n`;
-      const slotsText=multiclassSpellSlotsText();
-      if(slotsText) html+=`法术位: ${slotsText}\n`;
-      html+=`已选戏法(${c.cantripsKnown||0}): ${S.chosenCantrips.join("、")||"(未选)"}\n`;
-      const sn=c.spellsKnown||c.prepSpells||c.spellbookL1;
-      html+=`已选1环法术(${sn||0}): ${S.chosenSpells.join("、")||"(未选)"}\n`;
-    }
+    if(isSpellcaster()) html+=`施法信息与法术清单: 见下方「法术总览」\n`;
     // 兼职职业信息(含该兼职职业全部已获职业特性)
     S.multiclass.forEach(mc=>{const mcCls=CLASSES.find(x=>x.id===mc.classId);if(mcCls){html+=`\n【兼职:${mcCls.name} ${mc.levels}级 · 职业特性】\n`;html+=classFeaturesText(mc.classId,mc.levels,mc.subClass);html+=`\n生命骰:d${mcCls.hd} | 主属性:${mcCls.primary}\n`;html+=`兼职获得熟练:${MULTICLASS_PROF[mc.classId]}\n`;if(mc.subClass){html+=`已选子职:${mc.subClass}\n`;}}});
     html+=`</pre>`;
