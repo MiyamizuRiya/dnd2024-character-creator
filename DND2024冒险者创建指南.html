@@ -1074,13 +1074,36 @@ function pb(v){return (v>=0?"+":"")+v}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1800)}
 function curClass(){return S.cls?CLASSES.find(c=>c.id===S.cls):null}
+// 魔法学徒专长(来自背景或人类专长;背景格式「魔法学徒(牧师)」,人类格式「魔法学徒 Magic Initiate」默认法师列表)
+function magicInitiateInfo(){
+  const cands=[];
+  const bg=curBg();
+  if(bg&&/^魔法学徒/.test(bg.feat)) cands.push(bg.feat);
+  const hf=S.speciesChoices["人类专长"];
+  if(hf&&/^魔法学徒/.test(hf)) cands.push(hf);
+  (S.asiChoices||[]).forEach(ch=>{ if(ch&&ch.type==="feat"&&ch.feat&&/^魔法学徒/.test(ch.feat)) cands.push(ch.feat); });
+  if(!cands.length) return null;
+  const m=cands[0].match(/\((牧师|德鲁伊|法师)\)/);
+  const cls=m?m[1]:"法师";
+  return {cls:cls,stat:cls==="牧师"||cls==="德鲁伊"?"感知":"智力"};
+}
 function isSpellcaster(){
   const c=curClass();
   if(!c) return false;
   if(c.spell) return true;
   if(c.id==="fighter" && S.subClass==="奥法骑士") return true;
   if(c.id==="rogue" && S.subClass==="诡术师") return true;
+  if(magicInitiateInfo()) return true; // 起源/人类/专长带来的施法能力
   return false;
+}
+// 施法属性:子职施法者与魔法学徒按其来源;否则按职业
+function getSpellStat(){
+  const c=curClass();
+  if(c&&(c.id==="fighter"&&S.subClass==="奥法骑士"||c.id==="rogue"&&S.subClass==="诡术师")) return "智力";
+  if(c&&c.spell) return c.spellStat||"智力";
+  const mi=magicInitiateInfo();
+  if(mi) return mi.stat;
+  return "智力";
 }
 function curSpecies(){return S.species?SPECIES.find(s=>s.id===S.species):null}
 function curBg(){return S.bg?BACKGROUNDS.find(b=>b.id===S.bg):null}
@@ -1088,8 +1111,8 @@ function effSpeed(sp){if(!sp)return 30;if(sp.id==="elf"&&S.speciesChoices["精�
 function effDarkvision(sp){if(!sp)return 0;if(sp.id==="elf"&&S.speciesChoices["精灵血系"]==="卓尔")return 120;return sp.darkvision||0;}
 
 function renderStepper(){
-  // 非施法者隐藏法术步骤
-  const steps = STEPS.filter((s,i)=> !(s.id==="spell" && curClass() && !curClass().spell));
+  // 非施法者隐藏法术步骤(与 go() 同口径:职业/子职/魔法学徒专长均计入)
+  const steps = STEPS.filter((s,i)=> !(s.id==="spell" && !isSpellcaster()));
   $("stepper").innerHTML = steps.map((s,idx)=>
     `<div class="step ${idx===S.step?'active':''} ${idx<S.step?'done':''}" onclick="go(${steps[idx]?idx:0})"><span class="n">${idx<S.step?'✓':idx}</span>${s.t}</div>`
   ).join("");
@@ -1489,7 +1512,7 @@ function renderBgs(){
     return `<div class="opt ${S.bg===b.id?"sel":""}" onclick="pickBg('${b.id}')"><div class="t">${b.name}</div><div class="s">${markStats} | ${b.feat}</div></div>`;
   }).join("");
 }
-function pickBg(id){S.bg=id;S.bgMode=null;S.bgPlus2=null;S.bgPlus1=null;S.bgAll1=[];S.bgTool=null;S.featChoices={};S.harrowingChoice=null;renderBgs();renderBgInfo();renderBgToolPick();renderHarrowing();renderBgBonusUI();renderSpeciesChoices();}
+function pickBg(id){S.bg=id;S.bgMode=null;S.bgPlus2=null;S.bgPlus1=null;S.bgAll1=[];S.bgTool=null;S.featChoices={};S.harrowingChoice=null;renderBgs();renderBgInfo();renderBgToolPick();renderHarrowing();renderBgBonusUI();renderSpeciesChoices();renderStepper();}
 function renderBgInfo(){
   const box=$("bg-info"); if(!S.bg){box.innerHTML="";return}
   const b=curBg();
@@ -1656,6 +1679,7 @@ function pickSpeciesChoice(key,v){
   S.featChoices={};
   broadcastGranted();
   renderSpeciesChoices();
+  renderStepper();
   if(S.step===STEPS.filter(function(s){return !(s.id==="spell"&&!isSpellcaster())}).length-1) renderSheet();
 }
 
@@ -1892,6 +1916,8 @@ function maxSpellLevel(){
     if(lv<=18) return 3;
     return 4;
   }
+  // 无职业施法但持有魔法学徒专长:仅一环
+  if(!c.spell && magicInitiateInfo()) return 1;
   return maxSpellLevelByClass(c.id, S.level||1);
 }
 function classSpellList(){
@@ -1899,8 +1925,10 @@ function classSpellList(){
   const c=curClass();
   const max=maxSpellLevel();
   const lvOrder={"戏法":0,"一环":1,"二环":2,"三环":3,"四环":4,"五环":5,"六环":6,"七环":7,"八环":8,"九环":9};
-  // 子职施法者用法师法术列表
-  const spellClassName = (c.id==="fighter"&&S.subClass==="奥法骑士")||(c.id==="rogue"&&S.subClass==="诡术师") ? "法师" : c.name;
+  // 子职施法者/魔法学徒用法师类列表
+  const isSub=(c.id==="fighter"&&S.subClass==="奥法骑士")||(c.id==="rogue"&&S.subClass==="诡术师");
+  const mi=(!c.spell&&!isSub)?magicInitiateInfo():null;
+  const spellClassName = isSub ? "法师" : (mi ? mi.cls : c.name);
   return SPELLS.filter(sp=>sp.cl.includes(spellClassName) && (lvOrder[sp.lv]||0)<=max);
 }
 function spellCantripCount(){
@@ -1910,6 +1938,8 @@ function spellCantripCount(){
   if(c.id==="fighter"&&S.subClass==="奥法骑士"){let n=2;if(S.level>=10)n++;return n;}
   // 诡术师:3戏法(10级+1)
   if(c.id==="rogue"&&S.subClass==="诡术师"){let n=3;if(S.level>=10)n++;return n;}
+  // 无职业施法但持有魔法学徒专长:2个戏法
+  if(!c.spell&&magicInitiateInfo()) return 2;
   return cantripsByLevel(c.id, S.level||1);
 }
 function spellTotalCount(){
@@ -1926,6 +1956,8 @@ function spellTotalCount(){
     const sm=mod(fa["智力"]);
     return Math.max(1,sm+Math.floor(lv/3)+1);
   }
+  // 无职业施法但持有魔法学徒专长:习得 1 个一环法术
+  if(!c.spell&&magicInitiateInfo()) return 1;
   if(c.spellsKnown) return KNOWN_SPELLS[c.id]?KNOWN_SPELLS[c.id][lv]||0:0;
   if(c.spellbookL1) return wizardSpellbook(lv);
   if(c.prepSpells){
@@ -1954,7 +1986,9 @@ function renderSpellUI(){
   const spellN=spellTotalCount();
   const maxLv=maxSpellLevel();
   let spellDesc="";
-  if(c.spellsKnown) spellDesc="选择 "+spellN+" 个法术(已知法术,固定)";
+  const miOnly=!c.spell&&!(c.id==="fighter"&&S.subClass==="奥法骑士")&&!(c.id==="rogue"&&S.subClass==="诡术师")&&magicInitiateInfo();
+  if(miOnly) spellDesc="魔法学徒:习得 <b>2</b> 个戏法和 <b>1</b> 个一环法术("+magicInitiateInfo().cls+"列表,长休后各可免费施展一次)";
+  else if(c.spellsKnown) spellDesc="选择 "+spellN+" 个法术(已知法术,固定)";
   else if(c.prepSpells) spellDesc="准备 "+spellN+" 个法术(每日可换)";
   else if(c.spellbookL1){
     // 法师区分:法术书容量 vs 当前可准备数(智力调整值+法师等级)
@@ -1963,7 +1997,7 @@ function renderSpellUI(){
     spellDesc="抄录 "+spellN+" 个法术入法术书;当前可准备 <b>"+prepN+"</b> 个(智力调整值+法师等级,长休可换)。升级/换法术时可从书内挑选";
   }
   if(maxLv===0&&cantripN===0){hint.innerHTML="<b>"+c.name+"</b>当前等级(1-2级)尚未解锁法术。3级开始可获得法术。";box.innerHTML="";return}
-  const spellStat=isSpellcaster()?(c.spellStat||"智力"):"智力";
+  const spellStat=getSpellStat();
   hint.innerHTML="<b>"+c.name+(S.subClass?"("+S.subClass+")":"")+"</b>使用<b>"+spellStat+"</b>施法。请选择 <b>"+cantripN+"</b> 个戏法 和 <b>"+spellN+"</b> 个法术(最高"+RING_NAMES[maxLv-1]+")。"+spellDesc+"。";
   // 环阶筛选按钮(顶部)
   const lvOpts=spellLevelOptions();
@@ -2182,7 +2216,7 @@ function renderSheet(){
     const mcCls=CLASSES.find(x=>x.id===mc.classId);
     if(mcCls){hp+=mc.levels*(Math.floor(mcCls.hd/2)+1+conMod);}
   });
-  hasTough=(bg&&bg.feat==="健壮")||(S.speciesChoices["人类专长"]==="健壮")||((S.asiChoices||[]).some(ch=>ch&&ch.type==="feat"&&ch.feat==="健壮"));
+  hasTough=(bg&&/^健壮/.test(bg.feat))||(S.speciesChoices["人类专长"]&&/^健壮/.test(S.speciesChoices["人类专长"]))||((S.asiChoices||[]).some(ch=>ch&&ch.type==="feat"&&ch.feat&&/^健壮/.test(ch.feat)));
   if(hasTough) hp+=2*S.level;
   if(sp&&sp.id==="dwarf") hp+=S.level;
     const gearAC=calcGearAC(c,fa,chosenGearText());
@@ -2223,7 +2257,7 @@ function renderSheet(){
     html+=`</pre>`;
     // 法术总览(独立区块):施法核心数据 + 始终准备/自选法术 + 法术卡代码
     if(isSpellcaster()){
-      const spellStat=c.spellStat||"智力";
+      const spellStat=getSpellStat();
       const spellAbi=fa[spellStat];
       const spellMod=mod(spellAbi);
       const spellDC=8+prof+spellMod;
@@ -2234,7 +2268,9 @@ function renderSheet(){
       const code=buildSpellCode(always);
       html+=`<h3>法术总览</h3><pre>`;
       html+=`施法属性: ${spellStat}(${spellAbi},${spellMod>=0?"+":""}${spellMod}) | 法术攻击加值: ${spellAtk>=0?"+":""}${spellAtk} | 法术豁免DC: ${spellDC}\n`;
-      html+=`法术位: ${slotsText||"无"}${slotTotal?`(合计 ${slotTotal} 个)`:""}\n`;
+      if(slotsText) html+=`法术位: ${slotsText}${slotTotal?`(合计 ${slotTotal} 个)`:""}\n`;
+      else if(magicInitiateInfo()&&!c.spell) html+=`法术位: 无(魔法学徒的 1 环法术长休后可免费施展一次)\n`;
+      else html+=`法术位: 无\n`;
       html+=`\n【始终准备的法术】(${always.length} 个,职业/种族/子职自动获得,不占自选名额)\n`;
       if(always.length) always.forEach(a=>{html+=`  • ${esc(a.name)}(${esc(a.src)})\n`;});
       else html+=`  (无)\n`;
