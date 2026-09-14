@@ -465,6 +465,17 @@ const HALF_CASTER_SLOTS={
 13:[4,3,3,1,0],14:[4,3,3,1,0],15:[4,3,3,2,0],16:[4,3,3,2,0],17:[4,3,3,3,1],18:[4,3,3,3,1],
 19:[4,3,3,3,2],20:[4,3,3,3,2]
 };
+// 半施法者准备法术数(官方表,圣武士/游侠同表,2024 玩家手册职业表"准备法术"列)
+const HALF_PREPARED={1:2,2:3,3:4,4:5,5:6,6:6,7:7,8:7,9:9,10:9,11:10,12:10,13:11,14:11,15:12,16:12,17:14,18:14,19:15,20:15};
+// 子职施法者(奥法骑士/诡术师)法术位表(官方两表相同,键为该职业等级):[1环,2环,3环,4环]
+const SUBCLASS_CASTER_SLOTS={
+3:[2,0,0,0],4:[3,0,0,0],5:[3,0,0,0],6:[3,0,0,0],
+7:[4,2,0,0],8:[4,2,0,0],9:[4,2,0,0],10:[4,2,0,0],11:[4,2,0,0],12:[4,2,0,0],
+13:[4,3,2,0],14:[4,3,2,0],15:[4,3,2,0],16:[4,3,3,0],17:[4,3,3,0],18:[4,3,3,0],
+19:[4,3,3,1],20:[4,3,3,1]
+};
+// 子职施法者准备法术数(官方表,键为该职业等级 3-20)
+const SUBCLASS_PREPARED={3:3,4:4,5:4,6:4,7:5,8:6,9:6,10:7,11:8,12:8,13:9,14:10,15:10,16:11,17:11,18:11,19:12,20:13};
 // 魔契师法术位:{slots:数量, level:环阶}
 const WARLOCK_SLOTS={
 1:{slots:1,lv:1},2:{slots:2,lv:1},3:{slots:2,lv:2},4:{slots:2,lv:2},5:{slots:2,lv:3},6:{slots:2,lv:3},
@@ -956,14 +967,14 @@ const MULTICLASS_REQ={
 // 兼职时获得的熟练
 const MULTICLASS_PROF={
   barbarian:"轻甲、中甲、盾牌、简易和军用武器",
-  bard:"轻甲、简易武器、任选1项技能熟练",
-  cleric:"轻甲、中甲、盾牌、简易武器",
-  druid:"轻甲、中甲(非金属)、盾牌(非金属)、简易武器",
-  fighter:"轻甲、中甲、重甲、盾牌、简易和军用武器",
+  bard:"生命值骰、任选一项技能熟练、任选一项乐器熟练和轻甲",
+  cleric:"生命值骰、轻甲、中甲和盾牌",
+  druid:"生命值骰、轻甲和盾牌",
+  fighter:"生命值骰、军用武器熟练以及轻甲、中甲和盾牌(护甲受训通常已具备,意为不丢失)",
   monk:"简易武器和具轻型词条的军用武器",
   paladin:"轻甲、中甲、重甲、盾牌、简易和军用武器",
   ranger:"轻甲、中甲、盾牌、简易和军用武器",
-  rogue:"轻甲、简易武器和具灵巧或轻型词条的军用武器、盗贼工具",
+  rogue:"生命值骰、轻甲、简易武器、盗贼工具",
   sorcerer:"简易武器",
   warlock:"轻甲、简易武器",
   wizard:"简易武器"
@@ -1152,8 +1163,9 @@ function renderClasses(){
 
 function pickClass(id){
   S.cls=id; S.chosenSkills=[]; S.chosenCantrips=[]; S.chosenSpells=[]; S.toolChoices=[];
-  S.subClass=null;S.gearChoice=null;S.chosenInvocations=[];S.chosenFightingStyles=[];S.chosenMetamagic=[];S.chosenManeuvers=[]; renderClasses(); renderClassInfo(); renderSkillPick(); renderToolPick(); renderSubclassPick(); renderBgs();
+  S.subClass=null;S.gearChoice=null;S.druidOrder=null;S.chosenInvocations=[];S.chosenFightingStyles=[];S.chosenMetamagic=[];S.chosenManeuvers=[]; renderClasses(); renderClassInfo(); renderSkillPick(); renderToolPick(); renderSubclassPick(); renderBgs();
 }
+function setDruidOrder(v){ S.druidOrder=v; renderClassInfo(); if(document.getElementById("spell-hint")) renderSpellUI(); }
 // 解析起始装备选项:"(A)…;或(B)…;或(C)…" → [{k:'A',text:'…'},…]
 function gearOptions(c){
   const segs=String(c.startGear||"").split(/;|；/).map(s=>s.trim()).filter(Boolean);
@@ -1214,6 +1226,14 @@ function renderClassInfo(){
   }
   html+=`</p>`;
   html+=`<p style="margin:10px 0 4px;color:var(--gold2);font-size:.85rem;font-weight:600">1 级职业特性</p><ul>`;
+  // 德鲁伊 1 级「原初职能」二选一
+  if(c.id==="druid"){
+    html+=`<li style="list-style:none;margin:6px 0"><b style="color:var(--gold2)">原初职能(二选一):</b>
+      <span class="radio-row" style="display:inline-flex;margin-left:8px">
+      <span class="radio-opt ${S.druidOrder==='术师'?'sel':''}" onclick="setDruidOrder('术师')" title="从德鲁伊法术列表额外学会一道戏法(戏法总数+1);智力(奥秘和自然)检定加感知调整值(最低+1)">术师 Magician</span>
+      <span class="radio-opt ${S.druidOrder==='卫士'?'sel':''}" onclick="setDruidOrder('卫士')" title="获得军用武器熟练和中甲受训">卫士 Warden</span></span>
+      <span class="note" style="display:block;margin-left:4px">${S.druidOrder==='术师'?'已选术师:戏法 +1,智力(奥秘/自然)检定 +感知调整值(最低+1)':S.druidOrder==='卫士'?'已选卫士:获得军用武器熟练与中甲受训(计入角色卡)':'未选择(影响戏法数量与武器/护甲栏)'}</span></li>`;
+  }
   c.level1.forEach(t=>html+=`<li>${t}</li>`);
   html+=`</ul>`;
   if(c.spell){
@@ -1938,6 +1958,8 @@ function spellCantripCount(){
   if(c.id==="fighter"&&S.subClass==="奥法骑士"){let n=2;if(S.level>=10)n++;return n;}
   // 诡术师:3戏法(10级+1)
   if(c.id==="rogue"&&S.subClass==="诡术师"){let n=3;if(S.level>=10)n++;return n;}
+  // 德鲁伊「原初职能·术师」:额外一道戏法
+  if(c.id==="druid") return cantripsByLevel("druid",S.level||1)+(S.druidOrder==="术师"?1:0);
   // 无职业施法但持有魔法学徒专长:2个戏法
   if(!c.spell&&magicInitiateInfo()) return 2;
   return cantripsByLevel(c.id, S.level||1);
@@ -1948,19 +1970,17 @@ function spellTotalCount(){
   const lv=S.level||1;
   const max=maxSpellLevel();
   if(max===0) return 0;
-  // 子职施法者:准备法术数=智力调整值+职业等级/3(向下取整)?? 实际上按规则是固定表
-  // 奥法骑士:3级3个,7级5个,10级6个,14级7个,16级8个,19级9个,20级10个
-  // 诡术师类似。简化:用智力调整值+floor(等级/3)+1
+  // 子职施法者(奥法骑士/诡术师):官方表准备数(按该职业等级)
   if((c.id==="fighter"&&S.subClass==="奥法骑士")||(c.id==="rogue"&&S.subClass==="诡术师")){
-    const fa=finalAbi();
-    const sm=mod(fa["智力"]);
-    return Math.max(1,sm+Math.floor(lv/3)+1);
+    return SUBCLASS_PREPARED[getMainClassLevels()]||3;
   }
   // 无职业施法但持有魔法学徒专长:习得 1 个一环法术
   if(!c.spell&&magicInitiateInfo()) return 1;
   if(c.spellsKnown) return KNOWN_SPELLS[c.id]?KNOWN_SPELLS[c.id][lv]||0:0;
   if(c.spellbookL1) return wizardSpellbook(lv);
   if(c.prepSpells){
+    // 半施法者(圣武士/游侠):官方"准备法术"表(按本职业等级)
+    if(c.id==="paladin"||c.id==="ranger") return HALF_PREPARED[getMainClassLevels()]||2;
     const fa=finalAbi();
     const sm=mod(fa[c.spellStat]);
     return Math.max(1,sm+lv); // 2024 准备制:施法属性调整值+等级,至少 1
@@ -2123,11 +2143,9 @@ function onHeightChange(v){
 /* ---- Sheet ---- *//* ---- Sheet ---- */
 function proficiency(){return profByLevel(S.level||1);}
 function spellSlotsText(classId,lv){
-  // 子职施法者用1/3施法者等级
+  // 子职施法者:官方子职施法表(最高四环,勿用全施法者表推算)
   if((classId==="fighter"&&S.subClass==="奥法骑士")||(classId==="rogue"&&S.subClass==="诡术师")){
-    const casterLv=Math.floor(lv/3);
-    if(casterLv<1) return "";
-    const s=FULL_CASTER_SLOTS[casterLv]||[0,0,0,0,0,0,0,0,0];
+    const s=SUBCLASS_CASTER_SLOTS[lv]||[0,0,0,0];
     let parts=[];
     for(let i=0;i<4;i++){if(s[i]>0) parts.push(RING_NAMES[i]+":"+s[i]+"个");}
     return parts.join("、");
@@ -2247,7 +2265,7 @@ function renderSheet(){
     if(S.subClass)html+=`已选子职: ${S.subClass}\n`;
     else if(featLv>=3)html+=`可选子职: ${c.subs.join("、")}(未选)\n`;
     html+=`生命骰: d${c.hd}(${c.hdLabel}) | 主属性: ${c.primary} | 豁免: ${c.save.join("、")}\n`;
-    html+=`护甲受训: ${c.armor} | 武器: ${c.weapons}\n`;
+    html+=`护甲受训: ${c.armor}${c.id==="druid"&&S.druidOrder==="卫士"?" +中甲(原初职能·卫士)":""} | 武器: ${c.weapons}${c.id==="druid"&&S.druidOrder==="卫士"?" +军用武器(原初职能·卫士)":""}\n`;
     if(c.tools) html+=`工具熟练: ${c.tools}${S.toolChoices.length?' → '+S.toolChoices.join('、'):''}\n`;
     const sl=c.skills==="任意"?"任意三项":c.skills.join("、")+"(选"+c.nSkills+")";
     html+=`技能熟练(职业): ${sl}\n已选技能: ${S.chosenSkills.join("、")||"(未选)"}\n`;
@@ -2274,6 +2292,8 @@ function renderSheet(){
       html+=`\n【始终准备的法术】(${always.length} 个,职业/种族/子职自动获得,不占自选名额)\n`;
       if(always.length) always.forEach(a=>{html+=`  • ${esc(a.name)}(${esc(a.src)})\n`;});
       else html+=`  (无)\n`;
+      const apNotes=alwaysPreparedNotes();
+      if(apNotes.length){html+=`\n【常备/无位施展注记】\n`;apNotes.forEach(n=>{html+=`  · ${esc(n)}\n`;});}
       const seen=new Set(always.map(a=>a.name));
       const uniqCan=S.chosenCantrips.filter(n=>!seen.has(n));
       const uniqSp=S.chosenSpells.filter(n=>!seen.has(n));
@@ -2430,6 +2450,7 @@ function resetAll(){
   S.species=null;
   S.subClass=null;
   S.gearChoice=null;
+  S.druidOrder=null;
   S.asiChoices=[];
   S.multiclass=[];
   S.chosenSkills=[];
@@ -2568,8 +2589,7 @@ function slotsStruct(){
   const c=curClass();
   if(!c||!isSpellcaster()) return out;
   if((c.id==="fighter"&&S.subClass==="奥法骑士")||(c.id==="rogue"&&S.subClass==="诡术师")){
-    const eff=Math.floor(S.level/3);
-    const s=eff>=1?(FULL_CASTER_SLOTS[eff]||null):null;
+    const s=SUBCLASS_CASTER_SLOTS[S.level]||null;
     if(s)for(let i=0;i<4;i++)if(s[i]>0)out[RING_NAMES[i]]=s[i];
     return out;
   }
@@ -2764,6 +2784,8 @@ function alwaysPreparedSpells(){
   if(sp) grantedSpells().forEach(n=>push(n,"种族·"+sp.name));
   const lvOf=(id)=>{ let lv=0; const c=curClass(); if(c&&c.id===id) lv+=getMainClassLevels(); S.multiclass.forEach(m=>{if(m.classId===id)lv+=m.levels;}); return lv; };
   if(lvOf("ranger")>=1) push("猎人印记","游侠·宿敌");
+  if(lvOf("druid")>=1) push("动物交谈","德鲁伊·德鲁伊语");
+  if(lvOf("paladin")>=1) push("至圣斩","圣武士·圣武斩");
   const c=curClass();
   if(c&&S.subClass){
     const t=(SUBCLASS_SPELLS[c.id]||{})[S.subClass];
@@ -2777,7 +2799,18 @@ function alwaysPreparedSpells(){
   });
   return out;
 }
-// 法术位总数(不含玄奥秘法)
+// 常备/无位施展的规则注记(非具体法术,渲染在总览常备列表后)
+function alwaysPreparedNotes(){
+  const notes=[];
+  const c=curClass();
+  const lvOf=(id)=>{ let lv=0; const cc=curClass(); if(cc&&cc.id===id) lv+=getMainClassLevels(); S.multiclass.forEach(m=>{if(m.classId===id)lv+=m.levels;}); return lv; };
+  if(lvOf("ranger")>=1) notes.push("猎人印记:每长休可无位施展 熟练加值 次");
+  if(lvOf("paladin")>=1) notes.push("至圣斩:每长休可无位施展 1 次");
+  const wiz=lvOf("wizard");
+  if(wiz>=18) notes.push("法师18级法术精通:自选 1 道一环+1 道二环始终准备,可以最低环阶无位施展");
+  if(wiz>=20) notes.push("法师20级招牌法术:自选 2 道三环始终准备,每道每短休可无位施展 1 次");
+  return notes;
+}
 function slotsTotalCount(){
   const s=slotsStruct();
   let n=0;
