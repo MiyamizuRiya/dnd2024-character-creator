@@ -467,6 +467,14 @@ const HALF_CASTER_SLOTS={
 };
 // 半施法者准备法术数(官方表,圣武士/游侠同表,2024 玩家手册职业表"准备法术"列)
 const HALF_PREPARED={1:2,2:3,3:4,4:5,5:6,6:6,7:7,8:7,9:9,10:9,11:10,12:10,13:11,14:11,15:12,16:12,17:14,18:14,19:15,20:15};
+// 全施法者准备法术数(官方表"准备法术"列,2024;魔契师用 KNOWN_SPELLS 已知表)
+const PREPARED_TABLES={
+  bard:[4,5,6,7,9,10,11,12,14,15,16,16,17,17,18,18,19,20,21,22],
+  cleric:[4,5,6,7,9,10,11,12,14,15,16,16,17,17,18,18,19,20,21,22],
+  druid:[4,5,6,7,9,10,11,12,14,15,16,16,17,17,18,18,19,20,21,22],
+  sorcerer:[2,4,6,7,9,10,11,12,14,15,16,16,17,17,18,18,19,20,21,22],
+  wizard:[4,5,6,7,9,10,11,12,14,15,16,16,17,18,19,21,22,23,24,25]
+};
 // 子职施法者(奥法骑士/诡术师)法术位表(官方两表相同,键为该职业等级):[1环,2环,3环,4环]
 const SUBCLASS_CASTER_SLOTS={
 3:[2,0,0,0],4:[3,0,0,0],5:[3,0,0,0],6:[3,0,0,0],
@@ -1981,9 +1989,12 @@ function spellTotalCount(){
   if(c.prepSpells){
     // 半施法者(圣武士/游侠):官方"准备法术"表(按本职业等级)
     if(c.id==="paladin"||c.id==="ranger") return HALF_PREPARED[getMainClassLevels()]||2;
+    // 全施法者:官方"准备法术"表(2024 职业表,如 1 级德鲁伊=4;旧公式 属性调整值+等级 与表不等价,已弃用)
+    const tbl=PREPARED_TABLES[c.id];
+    if(tbl) return tbl[Math.min(20,Math.max(1,getMainClassLevels()))-1];
     const fa=finalAbi();
     const sm=mod(fa[c.spellStat]);
-    return Math.max(1,sm+lv); // 2024 准备制:施法属性调整值+等级,至少 1
+    return Math.max(1,sm+lv);
   }
   return 0;
 }
@@ -2011,14 +2022,13 @@ function renderSpellUI(){
   else if(c.spellsKnown) spellDesc="选择 "+spellN+" 个法术(已知法术,固定)";
   else if(c.prepSpells) spellDesc="准备 "+spellN+" 个法术(每日可换)";
   else if(c.spellbookL1){
-    // 法师区分:法术书容量 vs 当前可准备数(智力调整值+法师等级)
-    const fa=finalAbi();
-    const prepN=Math.max(1,mod(fa["智力"])+lv);
-    spellDesc="抄录 "+spellN+" 个法术入法术书;当前可准备 <b>"+prepN+"</b> 个(智力调整值+法师等级,长休可换)。升级/换法术时可从书内挑选";
+    // 法师区分:法术书容量 vs 当前可准备数(官方"准备法术"表)
+    const prepN=PREPARED_TABLES.wizard[Math.min(20,Math.max(1,getMainClassLevels()))-1];
+    spellDesc="抄录 "+spellN+" 个法术入法术书;当前可准备 <b>"+prepN+"</b> 个(官方表,长休可换)。升级/换法术时可从书内挑选";
   }
   if(maxLv===0&&cantripN===0){hint.innerHTML="<b>"+c.name+"</b>当前等级(1-2级)尚未解锁法术。3级开始可获得法术。";box.innerHTML="";return}
   const spellStat=getSpellStat();
-  hint.innerHTML="<b>"+c.name+(S.subClass?"("+S.subClass+")":"")+"</b>使用<b>"+spellStat+"</b>施法。请选择 <b>"+cantripN+"</b> 个戏法 和 <b>"+spellN+"</b> 个法术(最高"+RING_NAMES[maxLv-1]+")。"+spellDesc+"。";
+  hint.innerHTML="<b>"+c.name+(S.subClass?"("+S.subClass+")":"")+"</b>使用<b>"+spellStat+"</b>施法。请选择 <b>"+cantripN+"</b> 个戏法 和 <b>"+spellN+"</b> 个法术(最高"+RING_NAMES[maxLv-1]+")。"+spellDesc+"。常备法术(种族/职业特性/子职授予)自动拥有,不占戏法与准备位。";
   // 环阶筛选按钮(顶部)
   const lvOpts=spellLevelOptions();
   let btnHtml='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">';
@@ -2027,8 +2037,12 @@ function renderSpellUI(){
     btnHtml+='<button class="radio-opt '+(S.spellFilter.lv===o.v?'sel':'')+'" onclick="setSpellFilter(\''+o.v+'\')">'+o.label+'</button>';
   });
   btnHtml+='</div>';
+  // 计数剔除常备法术
+  const _as=new Set(alwaysPreparedSpells().map(a=>a.name));
+  const _cC=S.chosenCantrips.filter(n=>!_as.has(n)).length;
+  const _cS=S.chosenSpells.filter(n=>!_as.has(n)).length;
   let html='<div>'+btnHtml+'<div class="row" style="margin-bottom:10px"><input type="text" id="spell-kw" placeholder="搜索法术名/学派..." oninput="S.spellFilter.kw=this.value;renderSpellList()" style="max-width:300px"></div></div>';
-  html+='<div class="skill-counter" id="spell-counter">已选戏法 <b>'+S.chosenCantrips.length+'/'+cantripN+'</b> · 已选法术 <b>'+S.chosenSpells.length+'/'+spellN+'</b></div>';
+  html+='<div class="skill-counter" id="spell-counter">已选戏法 <b>'+_cC+'/'+cantripN+'</b> · 已选法术 <b>'+_cS+'/'+spellN+'</b>(常备法术不占位)</div>';
   html+='<div class="selected-spells" id="sel-spells"></div>';
   html+='<div class="spell-list" id="spell-list"></div>';
   box.innerHTML=html;
@@ -2047,20 +2061,27 @@ function renderSpellList(){
   filtered.sort((a,b)=>(lvOrder[a.lv]||0)-(lvOrder[b.lv]||0) || a.n.localeCompare(b.n));
   const cantripN=spellCantripCount();
   const spellN=spellTotalCount();
+  // 始终准备的法术(种族/职业特性/子职授予):自动拥有,不占戏法/准备位,不可手选
+  const alwaysSet=new Set(alwaysPreparedSpells().map(a=>a.name));
+  const cntC=S.chosenCantrips.filter(n=>!alwaysSet.has(n)).length;
+  const cntS=S.chosenSpells.filter(n=>!alwaysSet.has(n)).length;
   $("spell-list").innerHTML = filtered.length ? filtered.map(s=>{
     const isC=s.lv==="戏法";
     const sel=isC?S.chosenCantrips.includes(s.n):S.chosenSpells.includes(s.n);
     const max=isC?cantripN:spellN;
-    const chosenArr=isC?S.chosenCantrips:S.chosenSpells;
-    const disabled=!sel && chosenArr.length>=max;
+    const chosenCnt=isC?cntC:cntS;
+    const disabled=!sel && chosenCnt>=max;
     // onclick 内联字符串:先做 JS 转义(反斜杠/单引号),再 esc() 保证属性安全
     const name=esc(s.n.replace(/\\/g,"\\\\").replace(/'/g,"\\'"));
-    let html='<div class="spell-item '+(sel?'sel':'')+'">';
+    const always=alwaysSet.has(s.n);
+    let html='<div class="spell-item '+(always||sel?'sel':'')+'">';
     html+='<div style="display:flex;justify-content:space-between;align-items:center">';
-    html+='<div style="flex:1"><span class="sn">'+esc(s.n)+'</span><span class="badge">'+esc(s.lv)+'</span><span class="badge">'+esc(s.sc)+'</span></div>';
+    html+='<div style="flex:1"><span class="sn">'+esc(s.n)+'</span><span class="badge">'+esc(s.lv)+'</span><span class="badge">'+esc(s.sc)+'</span>'+(always?'<span class="badge" style="background:#4a7a3a">常备·不占位</span>':'')+'</div>';
     html+='<div style="display:flex;gap:6px">';
     html+='<button class="btn ghost" style="padding:4px 10px;font-size:.76rem" onclick="previewOnly(\''+name+'\')">详情</button>';
-    if(sel){
+    if(always){
+      html+='<span class="pill good" style="align-self:center">✓ 已常备</span>';
+    }else if(sel){
       html+='<button class="btn" style="padding:4px 12px;font-size:.76rem;background:#4a341e" onclick="toggleSpell(\''+name+'\','+isC+')">已选 ✕</button>';
     }else if(disabled){
       html+='<button class="btn" style="padding:4px 12px;font-size:.76rem;opacity:.4" disabled>已达上限</button>';
@@ -2072,10 +2093,10 @@ function renderSpellList(){
     return html;
   }).join("") : '<p class="note" style="padding:14px">无匹配法术</p>';
   let selHtml="";
-  S.chosenCantrips.forEach(n=>{const nm=esc(n.replace(/\\/g,"\\\\").replace(/'/g,"\\'"));selHtml+='<span class="sel-pill" onclick="toggleSpell(\''+nm+'\',true)">戏法:'+esc(n)+' ✕</span>';});
-  S.chosenSpells.forEach(n=>{const nm=esc(n.replace(/\\/g,"\\\\").replace(/'/g,"\\'"));selHtml+='<span class="sel-pill" onclick="toggleSpell(\''+nm+'\',false)">'+esc(n)+' ✕</span>';});
+  S.chosenCantrips.filter(n=>!alwaysSet.has(n)).forEach(n=>{const nm=esc(n.replace(/\\/g,"\\\\").replace(/'/g,"\\'"));selHtml+='<span class="sel-pill" onclick="toggleSpell(\''+nm+'\',true)">戏法:'+esc(n)+' ✕</span>';});
+  S.chosenSpells.filter(n=>!alwaysSet.has(n)).forEach(n=>{const nm=esc(n.replace(/\\/g,"\\\\").replace(/'/g,"\\'"));selHtml+='<span class="sel-pill" onclick="toggleSpell(\''+nm+'\',false)">'+esc(n)+' ✕</span>';});
   $("sel-spells").innerHTML=selHtml?'<p class="note">已选(点击移除):</p>'+selHtml:"";
-  const counter='已选戏法 <b>'+S.chosenCantrips.length+'/'+cantripN+'</b> · 已选法术 <b>'+S.chosenSpells.length+'/'+spellN+'</b>';
+  const counter='已选戏法 <b>'+cntC+'/'+cantripN+'</b> · 已选法术 <b>'+cntS+'/'+spellN+'</b>(常备法术不占位)';
   const ce=$("spell-counter"); if(ce) ce.innerHTML=counter;
 }
 
@@ -2100,14 +2121,19 @@ function previewOnly(name){
 function toggleSpell(name,isCantrip){
   const cantripN=spellCantripCount();
   const spellN=spellTotalCount();
+  // 始终准备的法术自动拥有,不占戏法/准备位,禁止手选/移除
+  const alwaysSet=new Set(alwaysPreparedSpells().map(a=>a.name));
+  if(alwaysSet.has(name)){toast("「"+name+"」为常备法术,自动拥有且不占准备位,无需选择");return;}
+  const cntC=S.chosenCantrips.filter(n=>!alwaysSet.has(n)).length;
+  const cntS=S.chosenSpells.filter(n=>!alwaysSet.has(n)).length;
   if(isCantrip){
     const i=S.chosenCantrips.indexOf(name);
     if(i>=0) S.chosenCantrips.splice(i,1);
-    else if(S.chosenCantrips.length<cantripN) S.chosenCantrips.push(name);
+    else if(cntC<cantripN) S.chosenCantrips.push(name);
   } else {
     const i=S.chosenSpells.indexOf(name);
     if(i>=0) S.chosenSpells.splice(i,1);
-    else if(S.chosenSpells.length<spellN) S.chosenSpells.push(name);
+    else if(cntS<spellN) S.chosenSpells.push(name);
   }
   renderSpellList();
 }
