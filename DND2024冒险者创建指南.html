@@ -151,7 +151,9 @@
      .wrap{max-width:none!important;padding:0!important;margin:0!important}
      .panel{box-shadow:none!important;border:none!important;padding:0!important;margin:0!important}
      .sheet{background:#f4ecd8!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-     .sheet pre,.sheet table,.sheet .bigstat{break-inside:avoid}
+     .sheet table,.sheet .bigstat{break-inside:avoid}
+     /* 长 pre(职业特性/法术详情)必须允许跨页,否则超一页的整块被截断丢失 */
+     .sheet pre{break-inside:auto}
      .sheet h2,.sheet h3{break-after:avoid}
      .spell-list{max-height:none!important;overflow:visible!important}
      .step{display:none!important}
@@ -644,19 +646,26 @@ function renderClassFeaturesPick(){
   let html="";
   const c=curClass(); if(!c){box.innerHTML="";box.classList.add("hide");return;}
 
-  // 战斗风格
+  // 战斗风格(含职业专属替代项:游侠→德鲁伊教战士/圣武士→受祝福的勇士,替代战斗风格=获2道对应职业戏法)
   const fsLevels=fightingStyleLevels();
   if(fsLevels.length>0){
-    html+='<div class="divider"></div><h3 style="color:var(--gold2);font-family:Georgia,serif;margin:0 0 8px">战斗风格</h3>';
+    html+='<div class="divider"></div><h3 style="color:var(--gold2);font-family:Georgia,serif;margin:0 0 8px">战斗风格(或职业替代)</h3>';
     if(!S.chosenFightingStyles) S.chosenFightingStyles=[];
+    // 该职业可用的替代项
+    const altOpts=[];
+    if(c.id==="ranger") altOpts.push({n:"德鲁伊教战士",d:"替代战斗风格:习得 2 道自选德鲁伊戏法(感知施法,每级可换 1 个)"});
+    if(c.id==="paladin") altOpts.push({n:"受祝福的勇士",d:"替代战斗风格:习得 2 道自选牧师戏法(魅力施法)"});
     fsLevels.forEach((fsl,i)=>{
       const sel=S.chosenFightingStyles[i]||null;
       html+='<div class="card" style="margin-top:8px"><h3 style="font-size:.9rem">'+fsl.lv+'级战斗风格</h3>';
       html+='<div class="opt-grid">';
-      FIGHTING_STYLES.forEach(fs=>{
+      const allOpts=[...FIGHTING_STYLES,...altOpts];
+      allOpts.forEach(fs=>{
         const isSel=sel===fs.n;
         const usedElsewhere=S.chosenFightingStyles.some((s,j)=>j!==i&&s===fs.n);
-        html+='<div class="opt '+(isSel?'sel':'')+'" style="'+(usedElsewhere&&!isSel?'opacity:.5':'')+';position:relative" onclick="'+(usedElsewhere&&!isSel?'':'pickFightingStyle('+i+',\''+fs.n.replace(/'/g,"\\'")+'\')')+'"><div class="t">'+fs.n+'</div><div class="s">'+fs.d+'</div><button class="btn ghost" style="padding:3px 10px;font-size:.72rem;position:absolute;top:8px;right:8px" onclick="event.stopPropagation();showFightingStyleDetail(\''+fs.n.replace(/'/g,"\\'")+'\')">详情</button></div>';
+        const safeN=fs.n.replace(/'/g,"\\'");
+        const detailFn=FIGHTING_STYLES.some(x=>x.n===fs.n)?"showFightingStyleDetail('"+safeN+"')":"toast('"+safeN+": "+fs.d.replace(/'/g,"\\'")+"')";
+        html+='<div class="opt '+(isSel?'sel':'')+'" style="'+(usedElsewhere&&!isSel?'opacity:.5':'')+';position:relative" onclick="'+(usedElsewhere&&!isSel?'':'pickFightingStyle('+i+',\''+safeN+'\')')+'"><div class="t">'+fs.n+(altOpts.some(a=>a.n===fs.n)?' <span style="font-size:.7rem;color:var(--blue)">替代</span>':'')+'</div><div class="s">'+fs.d+'</div><button class="btn ghost" style="padding:3px 10px;font-size:.72rem;position:absolute;top:8px;right:8px" onclick="event.stopPropagation();'+detailFn+'">详情</button></div>';
       });
       html+='</div></div>';
     });
@@ -2007,7 +2016,17 @@ function classSpellList(){
   if(!p){ const mi=magicInitiateInfo(); spellClassName=mi?mi.cls:null; }
   else spellClassName=p.isSub?"法师":p.cls.name;
   if(!spellClassName) return [];
-  return SPELLS.filter(sp=>sp.cl.includes(spellClassName) && (lvOrder[sp.lv]||0)<=max);
+  // 游侠「德鲁伊教战士」/圣武士「受祝福的勇士」:戏法可选列表追加对应职业的戏法
+  let extraCantripClass=null;
+  if(p&&!p.isSub){
+    if(p.cls.id==="ranger"&&(S.chosenFightingStyles||[]).includes("德鲁伊教战士")) extraCantripClass="德鲁伊";
+    if(p.cls.id==="paladin"&&(S.chosenFightingStyles||[]).includes("受祝福的勇士")) extraCantripClass="牧师";
+  }
+  return SPELLS.filter(sp=>{
+    const inMain=sp.cl.includes(spellClassName);
+    const inExtra=extraCantripClass&&sp.lv==="戏法"&&sp.cl.includes(extraCantripClass);
+    return (inMain||inExtra)&&(lvOrder[sp.lv]||0)<=max;
+  });
 }
 function spellCantripCount(){
   if(!isSpellcaster()) return 0;
@@ -2022,6 +2041,10 @@ function spellCantripCount(){
   if(c.id==="druid") return cantripsByLevel("druid",lv)+(S.druidOrder==="术师"?1:0);
   // 牧师「圣职·奇术使」:额外一道戏法
   if(c.id==="cleric") return cantripsByLevel("cleric",lv)+(S.clericOrder==="奇术使"?1:0);
+  // 游侠「德鲁伊教战士」/圣武士「受祝福的勇士」替代战斗风格:+2 道对应职业戏法
+  if((c.id==="ranger"&&(S.chosenFightingStyles||[]).includes("德鲁伊教战士"))||
+     (c.id==="paladin"&&(S.chosenFightingStyles||[]).includes("受祝福的勇士")))
+    return cantripsByLevel(c.id,lv)+2;
   // 无职业施法但持有魔法学徒专长:2个戏法
   if(!c.spell&&!p.isSub&&magicInitiateInfo()) return 2;
   return cantripsByLevel(c.id,lv);
