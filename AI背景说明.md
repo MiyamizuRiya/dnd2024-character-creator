@@ -30,7 +30,7 @@
 - `开发密钥与新电脑指南.md` —— GitHub Token、git 身份、仓库/部署地址、推送命令与网络坑备用方案
 - `DND工具站源码合集/` —— 完整源码(含 `.git` 历史与 origin、build.js),进去就能继续开发
 
-也可以不用分发包,直接 `git clone https://github.com/MiyamizuRiya/dnd2024-character-creator`。开发只需 **Node.js**(任意新版,零 npm 依赖,跑构建脚本用)。
+也可以不用分发包,直接 `git clone https://gitee.com/MiyamizuRiya/dnd2024-character-creator`(**国内直连,推荐**)或 `git clone https://github.com/MiyamizuRiya/dnd2024-character-creator`。开发只需 **Node.js**(任意新版,零 npm 依赖,跑构建脚本用)。
 
 **改完源码后**:运行 `node build.js` 重建合集(见「四」),再提交推送即自动上线。
 
@@ -42,6 +42,12 @@
 | **GitHub Pages(镜像)** | https://miyamizuriya.github.io/dnd2024-character-creator | push `main` 自动构建 |
 
 - 仓库:`MiyamizuRiya/dnd2024-character-creator`,分支 `main`。
+- **双远程同步(2026-08-31 起,两台电脑协作开发)**:
+  - `origin` = **Gitee** https://gitee.com/MiyamizuRiya/dnd2024-character-creator(fetch + push,国内直连不需要梯子)
+  - `origin` 附加 GitHub push URL → **`git push` 一次双推**:Gitee(两台电脑进度互通)+ GitHub(触发 Netlify/Pages 部署)
+  - GitHub 那步失败**不阻塞**(Gitee 已同步;网络好时补推 `git push github main` 即可触发部署)
+  - `github` 远程保留为备用单推入口
+  - 新电脑首次 `git push` 会对 Gitee 和 GitHub 各弹一次凭据管理器登录,之后免密
 - ⚠️ **Netlify Publish 目录 = 仓库根**,根目录必须有 `index.html`(曾因入口只在 `netlify-deploy/` 子目录导致全站 404,已修复——勿重蹈覆辙)。
 - `5echm.kagangtuya.top` 与本项目无关,只是数据来源参考站。
 
@@ -220,7 +226,7 @@ DND工具站源码合集/            ← 本地即 git 仓库(origin=GitHub 上�
 
 1. **原开发机 Git Bash 崩**(`STATUS_DLL_INIT_FAILED`,疑似杀软注入):无可用 shell,文件/命令操作走 Node(`child_process.execSync` 直调 git/curl 可用)。
 2. **git 代理坑**:全局配了 `http.proxy=http://127.0.0.1:9098` 且代理常不在线,连 GitHub 失败时加 `-c http.proxy= -c https.proxy=` 直连绕过。
-3. **GFW 间歇拦截**:`api.github.com` 大多可达;`github.com:443`(git push)、`*.netlify.app`、`*.github.io` 时通时断。**git push 失败的可靠备用**:GitHub **Git Data API**(Node 直连 api.github.com):`POST /git/blobs`(base64 内容)→ `POST /git/trees`(base_tree=远程当前 tree)→ `POST /git/commits`(parent=远程 HEAD)→ `PATCH /git/refs/heads/main`。⚠️ URL path 含中文文件名必须 `encodeURIComponent`;Contents API 单文件限 1MB(合集 1.3MB 必须走 Git Data API);blob/tree/commit 创建成功但 ref 更新报 "not a fast forward" 时先重查远程 HEAD(可能已推进)。
+3. **GFW 间歇拦截**:`api.github.com` 大多可达;`github.com:443`(git push)、`*.netlify.app`、`*.github.io` 时通时断。**日常同步走 Gitee(直连稳定)**,GitHub 只在部署时需要;GitHub 推不动时的可靠备用:GitHub **Git Data API**(Node 直连 api.github.com):`POST /git/blobs`(base64 内容)→ `POST /git/trees`(base_tree=远程当前 tree)→ `POST /git/commits`(parent=远程 HEAD)→ `PATCH /git/refs/heads/main`。⚠️ URL path 含中文文件名必须 `encodeURIComponent`;Contents API 单文件限 1MB(合集 1.3MB 必须走 Git Data API);blob/tree/commit 创建成功但 ref 更新报 "not a fast forward" 时先重查远程 HEAD(可能已推进)。
 4. **本地/远程偶发等价提交分叉**(API 与 git 两种推送方式造成):内容一致、SHA 不同,不影响部署;网络好时 `git fetch origin && git reset --hard origin/main` 或 force push 对齐。
 5. **大文件读取**:`data/spells.js`、`data/items.js`、合集 html 超出某些读取工具 token 限制,用 Node `fs` 处理。
 6. **合集拼音层**:blob iframe 在 `file://` 下源为 null,CDN import 可能被拦→退化字符级模糊(不影响主功能)。
@@ -235,9 +241,9 @@ DND工具站源码合集/            ← 本地即 git 仓库(origin=GitHub 上�
 - **改物品卡**:`魔法物品卡/` 下对应文件,然后 `node build.js`。
 - **改合集本身**(选择页/菜单按钮):改 `build.js` 里的模板,重新构建。
 - **改文档**:改 `AI背景说明.md`;分发时把最新内容同步为 `DMsBestFriend/项目文档.md`。
-- **部署**:改源码 → `node build.js` → `git add -A && git commit` → push `main`(代理坑见九,失败走 API)→ Netlify+Pages 自动上线。
+- **部署/双机同步**:改源码 → `node build.js` → `git add -A && git commit` → `git push`(自动双推 Gitee+GitHub;换电脑先 `git pull`)→ Netlify+Pages 自动上线。
 - **用户输入一律过 `esc()`** 再进 innerHTML。
 
 ## 十一、一句话总结
 
-三套 D&D 2024 中文静态工具站(人物卡/法术卡/物品卡)+ 一个三合一自包含合集(入口选择页+菜单切换);合集由 `node build.js` 从源码构建(改源码必须重建并同步三入口);项目文档独立为 md 分发(`DMsBestFriend/项目文档.md`);push `main` 到 `MiyamizuRiya/dnd2024-character-creator` 即自动部署 Netlify 主站(Publish 目录=仓库根!)+ GitHub Pages;原开发机无 shell、git 代理坑多,Node 直调是万能解。
+三套 D&D 2024 中文静态工具站(人物卡/法术卡/物品卡)+ 一个三合一自包含合集(入口选择页+菜单切换);合集由 `node build.js` 从源码构建(改源码必须重建并同步三入口);项目文档独立为 md 分发(`DMsBestFriend/项目文档.md`);**双远程:Gitee(国内直连,两台电脑同步)+ GitHub(触发 Netlify 主站,Publish 目录=仓库根!+ Pages 镜像),`git push` 一次双推**;原开发机无 shell、git 代理坑多,Node 直调是万能解。
