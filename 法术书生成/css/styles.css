@@ -270,9 +270,10 @@ html.embedded .topbar { padding-right: 130px; }
   row-gap: 0;
   overflow: hidden;
 }
-/* A4 / Letter 内容区（= 纸张 - 左右/上下页边距 10mm，宽高各再留 1mm 余量：防打印时最右列卡片边框被裁 / 溢出空白页） */
-#pages { --page-w: 189mm; --page-h: 276mm; --gap: 5mm; }
-#pages[data-size="Letter"] { --page-w: 194.9mm; --page-h: 258mm; }
+/* A4 / Letter 内容区（= 纸张 - 页边距10mm；宽留 1mm 防最右列边框被裁；高另扣打印页码标签 ~5mm(4.8mm+1mm 余量)，
+   确保 label+page 总高不超可打印区(A4 277mm/Letter 259.4mm)，否则打印时每页会被错误拆成两页） */
+#pages { --page-w: 189mm; --page-h: 271mm; --gap: 5mm; }
+#pages[data-size="Letter"] { --page-w: 194.9mm; --page-h: 253mm; }
 .page { width: var(--page-w); height: var(--page-h); column-gap: var(--gap); row-gap: 0; }
 /* 卡片上下留半 gap,与相邻卡形成完整间距 */
 .card { margin: calc(var(--gap) / 2) 0; }
@@ -379,7 +380,7 @@ html.embedded .topbar { padding-right: 130px; }
   .page { box-shadow: none !important; width: var(--page-w) !important; height: var(--page-h) !important; }
   .card { break-inside: avoid; box-shadow: none; }
   /* 打印保留页码标签(含角色名),小字灰色,不占纸面打印区 */
-  .page-label { display: block !important; font-size: 8pt; color: #6b5436; text-align: center; padding: 0 0 2mm; }
+  .page-label { display: block !important; font-size: 8pt; line-height: 1; margin: 0; color: #6b5436; text-align: center; padding: 0 0 2mm; }
 }
 @page { size: A4; margin: 10mm; }
 @page letter { size: Letter; margin: 10mm; }

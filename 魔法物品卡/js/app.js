@@ -203,7 +203,7 @@
 
   // ---------- 测量与分页（半行粒度：1格=2半行,1.5格=3半行…） ----------
   const PX_PER_MM = 96 / 25.4;
-  const PAGE_DIMS = { A4: { w: 189, h: 276 }, Letter: { w: 194.9, h: 258 } };
+  const PAGE_DIMS = { A4: { w: 189, h: 271 }, Letter: { w: 194.9, h: 253 } };
   const GAP_MM = 5;
   const halfRows = () => state.rowsPerPage * 2;
   function getPageGrid() {
