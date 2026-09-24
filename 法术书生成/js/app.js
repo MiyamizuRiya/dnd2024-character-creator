@@ -92,11 +92,22 @@
     const qs = new Set(q); let cov = 0;
     qs.forEach(c => { if (t.indexOf(c) >= 0) cov++; });
     const coverage = qs.size ? cov / qs.size : 0;
+    // 字符重排(乱序输入,如「甲烁闪」→「闪烁甲」):字符集相同且长度相当,视为强命中
+    if (Math.abs(q.length - t.length) <= 1 && [...q].sort().join("") === [...t].sort().join("")) return 900 + q.length;
     const lev = levDist(q, t);
     const sim = 1 - lev / Math.max(q.length, t.length);
     const lcs = lcsLen(q, t) / q.length;
-    if (coverage < 0.5 && sim < 0.4) return 0;            // 信号太弱，不算命中
+    if (coverage < 0.6 || sim < 0.4) return 0;            // 双信号同时达标才算命中(单看字符覆盖噪声大)
     return coverage * 50 + sim * 30 + lcs * 20;
+  }
+  // 拼音层专用打分:声音近似要求子串命中或较高整体相似度;相似度按查询长度归一(长目标不再稀释)。
+  // 旧实现对拼音沿用字符覆盖率放行,垃圾查询的字母集能覆盖过半拼音名(曾致 237/391 弱命中)。
+  function pyScore(q, t) {
+    if (!q || !t) return 0;
+    if (t.includes(q)) return 1000 + q.length;
+    const sim = 1 - levDist(q, t) / q.length;
+    if (sim < 0.6) return 0;
+    return sim * 60 + (lcsLen(q, t) / q.length) * 40;
   }
   // 拼音层（声音近似）：摩登肯→魔邓肯。需在线加载 pinyin-pro；离线返回 null 退化为字符级匹配。
   // 同一套转换同时作用于查询与目标，故即便带音调也能命中子串。
@@ -124,7 +135,7 @@
     const en = (s.nameEn || "").toLowerCase();
     const sc = (s.school || "").toLowerCase();
     let score = Math.max(fuzzyScore(q, zh), fuzzyScore(q, en), fuzzyScore(q, sc));
-    if (qpy) score = Math.max(score, fuzzyScore(qpy, s._py || ""));
+    if (qpy) score = Math.max(score, pyScore(qpy, s._py || ""));
     return score;
   }
 
@@ -374,6 +385,7 @@
   function pinToTop(id) {
     if (!state.selSet.has(id)) return;
     state.selOrder = [id].concat(state.selOrder.filter(x => x !== id));
+    delete state.slotHints[id]; // 清掉手动槽位,否则重渲染仍留在原槽,置顶看似无效
     renderPreview(); renderSummary();
   }
   // 拖拽手动排序：把 dragId 移动到 targetId 之前
@@ -525,6 +537,7 @@
     $("#ritualFilter").addEventListener("change", (e) => { state.filters.ritual = e.target.checked; renderList(); });
     $("#concFilter").addEventListener("change", (e) => { state.filters.conc = e.target.checked; renderList(); });
     $("#onlySelected").addEventListener("change", (e) => { state.filters.onlySelected = e.target.checked; renderList(); });
+    $("#charName").addEventListener("input", () => renderPreview()); // 角色名即时刷新页标签
 
     const list = $("#spellList");
     // 整行点选：除「详情」按钮外，点任意位置即切换该法术的选中

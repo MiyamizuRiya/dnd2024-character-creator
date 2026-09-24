@@ -16,7 +16,7 @@
   const CATEGORIES = Array.from(new Set(ITEMS.map(s => s.category))).sort((a, b) => a.localeCompare(b, "zh"));
 
   const state = {
-    filters: { q: "", cat: "all", rarity: "all", att: false, onlySelected: false },
+    filters: { q: "", cat: "all", rarity: "all", att: false, cons: false, onlySelected: false },
     selEntries: [],          // [{uid, itemId}] —— 每条 = 一张卡；同物品可多条
     openDetails: new Set(),
     customItems: [],
@@ -87,8 +87,17 @@
     const sim = 1 - lev / Math.max(q.length, t.length);
     const lcs = lcsLen(q, t) / q.length;
     const lcsT = t.length > q.length ? lcsLen(q, t) / t.length : lcs; // 目标侧覆盖:惩罚只在长目标里凑齐字符的弱命中
-    if (coverage < 0.5 && sim < 0.4) return 0;
+    if (coverage < 0.6 || sim < 0.4) return 0; // 双信号同时达标才算命中(单看字符覆盖噪声大)
     return coverage * 40 + sim * 25 + lcs * 15 + lcsT * 20;
+  }
+  // 拼音层专用打分:声音近似要求子串命中或较高整体相似度;相似度按查询长度归一(长目标不再稀释)。
+  // 旧实现对拼音沿用字符覆盖率放行,垃圾查询的字母集能覆盖过半拼音名(曾致 300/417 弱命中)。
+  function pyScore(q, t) {
+    if (!q || !t) return 0;
+    if (t.includes(q)) return 1000 + q.length;
+    const sim = 1 - levDist(q, t) / q.length;
+    if (sim < 0.6) return 0;
+    return sim * 60 + (lcsLen(q, t) / q.length) * 40;
   }
   function toPinyinStr(str) {
     if (!window.__pinyin || !str) return null;
@@ -111,7 +120,7 @@
     const en = (s.nameEn || "").toLowerCase();
     const cat = (s.category || "").toLowerCase();
     let score = Math.max(fuzzyScore(q, zh), fuzzyScore(q, en), fuzzyScore(q, cat));
-    if (qpy) score = Math.max(score, fuzzyScore(qpy, pyOf(s)));
+    if (qpy) score = Math.max(score, pyScore(qpy, pyOf(s)));
     return score;
   }
 
@@ -124,6 +133,7 @@
       if (f.cat !== "all" && s.category !== f.cat) return false;
       if (f.rarity !== "all" && s.rarity !== f.rarity) return false;
       if (f.att && !s.attunement) return false;
+      if (f.cons && !s.consumable) return false;
       if (f.onlySelected && countOf(s.id) === 0) return false;
       if (!q) return true;
       if (!useFuzzy) {
@@ -351,7 +361,7 @@
   }
   // dataset 取出的 uid 是字符串，selEntries 里是数字 —— 统一在这里转换
   const toUid = v => parseInt(v, 10);
-  function pinToTop(uidRaw) { const uid = toUid(uidRaw); const idx = state.selEntries.findIndex(e => e.uid === uid); if (idx < 0) return; if (idx === 0) { showToast("已在顶部"); return; } const [e] = state.selEntries.splice(idx, 1); state.selEntries.unshift(e); renderPreview(); renderSummary(); }
+  function pinToTop(uidRaw) { const uid = toUid(uidRaw); const idx = state.selEntries.findIndex(e => e.uid === uid); if (idx < 0) return; if (idx === 0) { showToast("已在顶部"); return; } const [e] = state.selEntries.splice(idx, 1); state.selEntries.unshift(e); delete state.slotHints[uid]; /* 清掉手动槽位,否则重渲染仍留在原槽,置顶看似无效 */ renderPreview(); renderSummary(); }
   function reorder(uidRaw, targetRaw) { const uid = toUid(uidRaw), targetUid = toUid(targetRaw); if (uid === targetUid) return; const i = state.selEntries.findIndex(e => e.uid === uid); if (i < 0) return; const [e] = state.selEntries.splice(i, 1); const j = state.selEntries.findIndex(e => e.uid === targetUid); if (j < 0) state.selEntries.push(e); else state.selEntries.splice(j, 0, e); renderPreview(); renderSummary(); }
   // 删除单张卡（按 uid，不动自定义物品定义）
   function deleteEntry(uidRaw) { const uid = toUid(uidRaw); const idx = state.selEntries.findIndex(e => e.uid === uid); if (idx < 0) return; const [e] = state.selEntries.splice(idx, 1); delete state.slotHints[uid]; const s = getEntry(e.itemId); renderList(); renderPreview(); renderSummary(); showToast(`已删除卡片${s && s.nameZh ? "「" + s.nameZh + "」" : ""}（剩余 ${state.selEntries.length} 张）`); }
@@ -437,6 +447,7 @@
     $("#catFilter").addEventListener("change", e => { state.filters.cat = e.target.value; renderList(); });
     $("#rarityFilter").addEventListener("change", e => { state.filters.rarity = e.target.value; renderList(); });
     $("#attFilter").addEventListener("change", e => { state.filters.att = e.target.checked; renderList(); });
+    $("#consFilter").addEventListener("change", e => { state.filters.cons = e.target.checked; renderList(); });
     $("#onlySelected").addEventListener("change", e => { state.filters.onlySelected = e.target.checked; renderList(); });
 
     const list = $("#itemList");

@@ -55,6 +55,7 @@ const wrapper = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
 <title>DND 工具合集 · 人物卡 + 法术卡 + 物品卡</title>
 <style>
 html,body{margin:0;padding:0;height:100%;background:#0d0a06;overflow:hidden;font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif}
@@ -96,7 +97,7 @@ iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#0d0
     </button>
     <button type="button" class="gate-card" data-tool="items">
       <span class="ico">🛡</span><span class="t">物品卡</span>
-      <div class="s">魔法物品卡<br>419 条魔法物品 · 排版打印</div>
+      <div class="s">魔法物品卡<br>417 条魔法物品 · 排版打印</div>
     </button>
   </div>
   <div class="gate-foot">工具间互不干扰 · 右上角「☰ 选择工具」随时返回本页 · 三个工具后台常驻,切换不丢状态</div>
@@ -140,6 +141,19 @@ function backToGate(){
 tg.addEventListener('click', backToGate);
 Array.prototype.forEach.call(document.querySelectorAll('.gate-card'), function(c){
   c.addEventListener('click', function(){ enter(c.getAttribute('data-tool')); });
+});
+// A2 消息中继:blob iframe 内 postMessage 只能直达父页,由父页转发给兄弟 iframe。
+// postMessage('*') 跨源可用(blob iframe 在 file:// 下源为 null 也能通),兼容 http/file 双场景。
+window.addEventListener('message', function(e){
+  var d = e.data;
+  if (!d || !d.type) return;
+  if (d.type !== 'dnd:granted' && d.type !== 'dnd:requestGranted') return;
+  ['spellbook', 'adventurer', 'items'].forEach(function(id){
+    var f = document.getElementById(id);
+    if (f && f.contentWindow && f.contentWindow !== e.source) {
+      try { f.contentWindow.postMessage(d, '*'); } catch (err) {}
+    }
+  });
 });
 </script>
 </body>
