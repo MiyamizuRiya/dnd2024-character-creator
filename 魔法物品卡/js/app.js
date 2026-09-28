@@ -215,10 +215,11 @@
   const PX_PER_MM = 96 / 25.4;
   const PAGE_DIMS = { A4: { w: 189, h: 271 }, Letter: { w: 194.9, h: 253 } };
   const GAP_MM = 5;
+  const PAGE_PAD_MM = 2.5; // 页面左右内边距(打印出血线),与 CSS .page padding 保持一致
   const halfRows = () => state.rowsPerPage * 2;
   function getPageGrid() {
     const d = PAGE_DIMS[state.pageSize] || PAGE_DIMS.A4;
-    return { colW: ((d.w - GAP_MM) / 2) * PX_PER_MM, halfH: (d.h * PX_PER_MM) / halfRows(), halfRows: halfRows(), gapPx: GAP_MM * PX_PER_MM };
+    return { colW: ((d.w - GAP_MM - 2 * PAGE_PAD_MM) / 2) * PX_PER_MM, halfH: (d.h * PX_PER_MM) / halfRows(), halfRows: halfRows(), gapPx: GAP_MM * PX_PER_MM };
   }
   function computeSizes(entries) {
     const { colW, halfH, halfRows, gapPx } = getPageGrid();

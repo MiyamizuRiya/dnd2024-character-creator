@@ -257,7 +257,7 @@ html.embedded .topbar { padding-right: 130px; }
 
 .preview-scroll { flex: 1 1 auto; overflow: auto; padding: 26px 0; }
 /* 双页并排:一次预览两张纸(打印样式覆盖回单列) */
-#pages { display: grid; grid-template-columns: repeat(2, max-content); justify-content: center; align-items: start; column-gap: 26px; row-gap: 24px; transform-origin: top center; }
+#pages { display: grid; grid-template-columns: repeat(2, max-content); justify-content: safe center; align-items: start; column-gap: 26px; row-gap: 24px; transform-origin: top center; }
 
 .page-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .page-label { font-size: 11px; color: var(--ink-soft); font-family: var(--serif); }
@@ -269,6 +269,8 @@ html.embedded .topbar { padding-right: 130px; }
   column-gap: var(--gap, 5mm);
   row-gap: 0;
   overflow: hidden;
+  box-sizing: border-box;
+  padding: 0 2.5mm; /* 打印出血线:卡片与纸缘留 2.5mm(与 JS PAGE_PAD_MM 同步) */
 }
 /* A4 / Letter 内容区（= 纸张 - 页边距10mm；宽留 1mm 防最右列边框被裁；高另扣打印页码标签 ~5mm(4.8mm+1mm 余量)，
    确保 label+page 总高不超可打印区(A4 277mm/Letter 259.4mm)，否则打印时每页会被错误拆成两页） */
