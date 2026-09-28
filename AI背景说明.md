@@ -113,7 +113,9 @@ DND工具站源码合集/            ← 本地即 git 仓库(origin=GitHub 上�
 - 现象:用户反馈建卡流程重构未生效——排查为 **Netlify 主站停在 09-25 旧版**(26898df0),而 GitHub 仓库内容/Pages 镜像均已是最新(树 SHA 524e1e94 本地=远程,逐字一致)。
 - 根因:**GitHub Git Data API(blobs/trees/commits/refs)更新不触发 push webhook**,Netlify 自动部署从未收到通知;本机 git push 又被 GFW 拦截(直连+代理均失败),无法补发真实推送。
 - 影响:2026-09-28 的四批改动(测试报告/建卡流程重构/排版三修/删除交互)在 GitHub 与 Pages 镜像全部就绪,仅 Netlify 主站缺失。
-- 修复路径(三选一):① Netlify 控制台 Deploys→Trigger deploy(GitHub 内容已最新,直接部署);② 建 Build Hook 后 curl 触发(api.netlify.com 通常可达);③ 网络可通时 `git push --force-with-lease github main`(内容一致仅 SHA 分叉,force 安全)。
+- 修复路径:① **推荐** Netlify 控制台 Deploys→「Trigger deploy」(GitHub 内容已最新,手动拉取即部署,不依赖 webhook);② 建 Build Hook 后 curl 触发;③ 本机补推(见下)。
+- **⚠️ 后续实测(同日)**:经 SSH 443 通道完成两次真实 git push(d98df8d 强推+137d198 空提交快进,均成功落地 GitHub main)后,Netlify **仍未自动部署**——判定 Netlify 侧部署管线已断(可能:构建额度耗尽/构建被暂停/GitHub 连接失效),需登录 app.netlify.com 检查 Deploys 页(有无 failed/queued、「Auto publish」是否被关、用量是否超限)并手动 Trigger deploy。GitHub Pages 镜像不受影响,持续正常。
+- **✅ 本机被墙时给 GitHub 发真实 push 的可靠方法(已验证)**:`ssh.github.com:443` 可达 → ssh-keygen 生成临时密钥 → API 添加为仓库**可写部署密钥**(POST /repos/{o}/{r}/keys,repo 权限 PAT 即可) → `GIT_SSH_COMMAND='ssh -i <key> ...' git push ssh://git@ssh.github.com:443/{o}/{r}.git main` → **用后立即删部署密钥**。⚠️ 注意:repo 权限 PAT 无法经 API 改动 `.github/workflows/` 下文件(需 workflow scope,会报 404)。
 - 已知坑 §九 新增第 9 条;GitHub Pages 镜像(miyamizuriya.github.io)即时可用作新版验证入口。
 
 
