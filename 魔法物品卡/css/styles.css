@@ -172,9 +172,6 @@ html.embedded .topbar{padding-right:130px;}
 .cf-btn.up{right:calc(2.5mm + 128px);}
 .card:hover .cf-btn{opacity:1;}
 .cf-btn:hover{background:var(--gold);color:#2a190d;border-color:var(--gold-dk);transform:scale(1.12);}
-/* 拖到纸面外（深色桌面/预览区外）= 删除：光标旁小暗牌提示「松开删除」 */
-#dragDeleteHint{position:fixed;z-index:95;display:none;pointer-events:none;background:#1f130a;color:#f4e3b0;border:1px solid var(--gold-dk);border-radius:8px;padding:5px 12px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.4);white-space:nowrap;}
-#dragDeleteHint.show{display:block;}
 .card .card-meta:empty,.card .card-desc:empty{min-height:8pt;}
 /* 卡片：消耗品徽章 + 充能圆圈 */
 .card-tags{display:flex;align-items:center;gap:4px;align-self:center}
@@ -193,7 +190,7 @@ html.embedded .topbar{padding-right:130px;}
 @media print{
   html,body{background:#fff;height:auto;}
   #app{display:block;height:auto;overflow:visible;}
-  .topbar,.picker,.preview-toolbar,.empty-state,.toast,.pin-btn,.edit-btn,.del-btn,.cf-btn,#__measurer,#dragDeleteHint,.cell-slot{display:none !important;}
+  .topbar,.picker,.preview-toolbar,.empty-state,.toast,.pin-btn,.edit-btn,.del-btn,.cf-btn,#__measurer,.cell-slot{display:none !important;}
   .layout{display:block;}
   .preview{display:block;background:#fff;}
   .preview-scroll{display:block;overflow:visible;padding:0;}

@@ -536,30 +536,6 @@
       showToast(`该卡字号 ${Math.round(state.cardFont[uid] * 100)}%`);
     });
 
-    // 拖到纸面（.page）之外——页面周围的深色桌面/预览区外——松开 = 删除该卡片（光标旁小暗牌提示）
-    const inPage = t => !!(t && t.closest && t.closest(".page"));
-    const dragHint = () => {
-      let h = document.getElementById("dragDeleteHint");
-      if (!h) { h = document.createElement("div"); h.id = "dragDeleteHint"; h.textContent = "🗑 松开删除"; document.body.appendChild(h); }
-      return h;
-    };
-    document.addEventListener("dragover", e => {
-      if (!state._dragId) return;
-      e.preventDefault();
-      const h = dragHint();
-      if (inPage(e.target)) h.classList.remove("show");
-      else { h.classList.add("show"); h.style.left = (e.clientX + 16) + "px"; h.style.top = (e.clientY + 16) + "px"; }
-    });
-    document.addEventListener("drop", e => {
-      if (!state._dragId) return;
-      dragHint().classList.remove("show");
-      if (!inPage(e.target)) {
-        e.preventDefault();
-        const uid = state._dragId; state._dragId = null;
-        deleteEntry(uid);
-      }
-    });
-    document.addEventListener("dragend", () => { dragHint().classList.remove("show"); });
 
     // 卡片字号 A⁻/A⁺
     $("#fontUp").addEventListener("click", () => setFontScale(state.fontScale + 0.05));

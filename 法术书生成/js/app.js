@@ -220,6 +220,7 @@
     const styleAttr = ` style="${gridStyle || ""};--cfs:${cfs};"`;
     return `<article class="card l${s.level}${(state._overflow && state._overflow.has(s.id)) ? " overflowing" : ""}" data-id="${esc(s.id)}" draggable="true"${styleAttr}>
       <button class="pin-btn" type="button" data-id="${esc(s.id)}" draggable="false" title="置顶该法术" aria-label="置顶该法术">↑</button>
+      <button class="del-btn" type="button" data-del="${esc(s.id)}" draggable="false" title="删除该法术卡" aria-label="删除该法术卡">✕</button>
       <button class="cf-btn down" type="button" data-cf="${esc(s.id)}|-1" draggable="false" title="缩小这张卡的字号">A⁻</button>
       <button class="cf-btn up" type="button" data-cf="${esc(s.id)}|1" draggable="false" title="放大这张卡的字号">A⁺</button>
       <div class="card-head">
@@ -593,6 +594,8 @@
     // 预览区：置顶按钮 + 拖拽手动排序（委托在 #pages 上，重渲染后仍生效）
     const pages = $("#pages");
     pages.addEventListener("click", (e) => {
+      const del = e.target.closest(".del-btn");
+      if (del && del.dataset.del) { e.stopPropagation(); removeSpell(del.dataset.del); return; }
       const pin = e.target.closest(".pin-btn");
       if (pin && pin.dataset.id) { e.stopPropagation(); pinToTop(pin.dataset.id); }
     });
@@ -657,7 +660,6 @@
       pages.classList.remove("slot-mode");
       pages.querySelectorAll(".cell-slot.ok,.cell-slot.hover").forEach(c => { c.classList.remove("ok", "hover"); c.style.gridRowEnd = ""; c.dataset.span = "1"; });
       state._dragId = null;
-      dragHintEl().classList.remove("show");
     });
     // 单卡字号 A⁻/A⁺
     pages.addEventListener("click", (e) => {
@@ -670,30 +672,6 @@
       showToast(`该卡字号 ${Math.round(state.cardFont[id] * 100)}%`);
     });
 
-    // 拖到纸面（.page）之外——页面周围的深色桌面/预览区外——松开 = 删除该法术卡（光标旁小暗牌提示）
-    const inPage = t => !!(t && t.closest && t.closest(".page"));
-    const dragHintEl = () => {
-      let h = document.getElementById("dragDeleteHint");
-      if (!h) { h = document.createElement("div"); h.id = "dragDeleteHint"; h.textContent = "🗑 松开删除"; document.body.appendChild(h); }
-      return h;
-    };
-    document.addEventListener("dragover", e => {
-      if (!state._dragId) return;
-      e.preventDefault();
-      const h = dragHintEl();
-      if (inPage(e.target)) h.classList.remove("show");
-      else { h.classList.add("show"); h.style.left = (e.clientX + 16) + "px"; h.style.top = (e.clientY + 16) + "px"; }
-    });
-    document.addEventListener("drop", e => {
-      if (!state._dragId) return;
-      dragHintEl().classList.remove("show");
-      if (!inPage(e.target)) {
-        e.preventDefault();
-        const id = state._dragId; state._dragId = null;
-        removeSpell(id);
-      }
-    });
-    document.addEventListener("dragend", () => { dragHintEl().classList.remove("show"); });
 
     // 卡片字号 A⁻/A⁺
     $("#fontUp").addEventListener("click", () => setFontScale(state.fontScale + 0.05));
