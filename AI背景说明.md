@@ -109,6 +109,14 @@ DND工具站源码合集/            ← 本地即 git 仓库(origin=GitHub 上�
 
 ## 八、修复与功能记录
 
+**2026-09-28(五)·部署事故记录(建卡重构未上主站)**:
+- 现象:用户反馈建卡流程重构未生效——排查为 **Netlify 主站停在 09-25 旧版**(26898df0),而 GitHub 仓库内容/Pages 镜像均已是最新(树 SHA 524e1e94 本地=远程,逐字一致)。
+- 根因:**GitHub Git Data API(blobs/trees/commits/refs)更新不触发 push webhook**,Netlify 自动部署从未收到通知;本机 git push 又被 GFW 拦截(直连+代理均失败),无法补发真实推送。
+- 影响:2026-09-28 的四批改动(测试报告/建卡流程重构/排版三修/删除交互)在 GitHub 与 Pages 镜像全部就绪,仅 Netlify 主站缺失。
+- 修复路径(三选一):① Netlify 控制台 Deploys→Trigger deploy(GitHub 内容已最新,直接部署);② 建 Build Hook 后 curl 触发(api.netlify.com 通常可达);③ 网络可通时 `git push --force-with-lease github main`(内容一致仅 SHA 分叉,force 安全)。
+- 已知坑 §九 新增第 9 条;GitHub Pages 镜像(miyamizuriya.github.io)即时可用作新版验证入口。
+
+
 **2026-09-28(四)·卡片删除交互调整**:
 - **法术卡右上角新增 ✕ 删除按钮**(悬停显示,红色悬停样式,与物品卡同款 27px 圆钮);原置顶/字号按钮依次左移(36px 步进);点击经 #pages 委托调 removeSpell(带剩余张数 toast)。
 - **移除两卡「拖出纸面删除」**:删除 document 级 dragover/drop 的纸面外判定与「🗑 松开删除」提示牌(JS+CSS 全清,打印隐藏清单同步);拖拽换序与空槽投放功能保留不变。物品卡删除入口维持卡片右上角 ✕。
