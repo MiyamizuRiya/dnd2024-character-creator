@@ -38,7 +38,7 @@
 
 | 渠道 | 地址 | 触发 |
 |---|---|---|
-| **Netlify(主站)** | https://create-your-dnd2024-pc.netlify.app | push GitHub `main` 自动部署 |
+| **Netlify(主站)** | https://yourbestdndself.netlify.app | push GitHub `main` 自动部署 |
 | **GitHub Pages(镜像)** | https://miyamizuriya.github.io/dnd2024-character-creator | push `main` 自动构建 |
 
 - 仓库:`MiyamizuRiya/dnd2024-character-creator`,分支 `main`。
@@ -108,6 +108,9 @@ DND工具站源码合集/            ← 本地即 git 仓库(origin=GitHub 上�
 ```
 
 ## 八、修复与功能记录
+
+**2026-09-29(三)·Netlify 主站迁移**:旧站 create-your-dnd2024-pc.netlify.app 所在账号已不可访问且自动部署管线自 09-28 起中断;新建 **https://yourbestdndself.netlify.app**(GitHub 导入,push main 自动部署恢复)。文档中旧地址已全部替换;历史归档清单中的旧地址保留原文(记录当时事实)。GitHub Pages 镜像(miyamizuriya.github.io/dnd2024-character-creator)不受影响,持续可用。
+
 
 **2026-09-29(二)·排期项全量落地(规则一致性报告 2.1~2.14 + 兼职专项 P2-6/N-4 + P3-8)**:
 - **通用特性选择系统**(新):FEATURE_PICKS 数据驱动(radio/expertise/skillprof/text/text2 五型),`#extra-feature-pick` 容器渲染于「职业特性」步骤,S.featureChoices 统一存储,角色表新增【特性选择】区块。

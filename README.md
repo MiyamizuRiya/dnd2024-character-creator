@@ -17,7 +17,7 @@
 
 ## 部署
 
-push `main` 即自动部署:Netlify 主站 <https://create-your-dnd2024-pc.netlify.app>(Publish 目录 = 仓库根 `/`,依赖根目录 `index.html`)+ GitHub Pages 镜像 <https://miyamizuriya.github.io/dnd2024-character-creator>。
+push `main` 即自动部署:Netlify 主站 <https://yourbestdndself.netlify.app>(Publish 目录 = 仓库根 `/`,依赖根目录 `index.html`)+ GitHub Pages 镜像 <https://miyamizuriya.github.io/dnd2024-character-creator>。
 
 ## 数据来源
 
