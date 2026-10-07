@@ -1073,18 +1073,18 @@ const MULTICLASS_REQ={
 };
 // 兼职时获得的熟练
 const MULTICLASS_PROF={
-  barbarian:"轻甲、中甲、盾牌、简易和军用武器",
+  barbarian:"生命值骰、军用武器和盾牌(2024:无轻甲/中甲受训)",
   bard:"生命值骰、任选一项技能熟练、任选一项乐器熟练和轻甲",
   cleric:"生命值骰、轻甲、中甲和盾牌",
   druid:"生命值骰、轻甲和盾牌",
   fighter:"生命值骰、军用武器熟练以及轻甲、中甲和盾牌(护甲受训通常已具备,意为不丢失)",
-  monk:"简易武器和具轻型词条的军用武器",
-  paladin:"轻甲、中甲、重甲、盾牌、简易和军用武器",
-  ranger:"轻甲、中甲、盾牌、简易和军用武器",
-  rogue:"生命值骰、轻甲、简易武器、盗贼工具",
-  sorcerer:"简易武器",
-  warlock:"轻甲、简易武器",
-  wizard:"简易武器"
+  monk:"生命值骰(2024:仅此,无武器或护甲熟练)",
+  paladin:"生命值骰、军用武器、轻甲、中甲和盾牌(2024:无重甲)",
+  ranger:"生命值骰、军用武器、任选一项技能熟练(游侠列表)、轻甲、中甲和盾牌",
+  rogue:"生命值骰、任选一项技能熟练(游荡者列表)、盗贼工具和轻甲(2024:无简易武器)",
+  sorcerer:"生命值骰(2024:仅此,无武器熟练)",
+  warlock:"生命值骰和轻甲(2024:无简易武器)",
+  wizard:"生命值骰(2024:仅此,无武器熟练)"
 };
 // 施法等级换算(用于兼职法术位,2024 官方兼职规则)
 // 全施法者:等级全计; 半施法者:等级/2 向上取整; 奥法骑士/诡术师:等级/3 向下取整; 其余 0
@@ -2574,22 +2574,31 @@ function renderSpellUI(){
   const pSeg=segs[0]||null;
   let spellDesc="";
   const miOnly=!pSeg&&magicInitiateInfo();
+  const wizSeg=segs.find(sg=>sg.cls.spellbookL1);
+  const subSegs=segs.filter(sg=>sg.isSub);
   if(miOnly) spellDesc="魔法学徒:习得 <b>2</b> 个戏法和 <b>1</b> 个一环法术("+magicInitiateInfo().cls+"列表,长休后各可免费施展一次)";
   else if(spellSectionKeys().length>1) spellDesc="共 "+spellN+" 个法术(已按施法职业分段,各段独立上限)";
+  else if(wizSeg&&subSegs.length){
+    // 法师与奥法骑士/诡术师共用法师列表:书内与子职准备分列(官方:子职施法者的法术直接准备,不入法术书)
+    const prepN=PREPARED_TABLES.wizard[Math.min(20,Math.max(1,wizSeg.lv))-1];
+    spellDesc="法师:抄录 <b>"+wizardSpellbook(wizSeg.lv)+"</b> 个入法术书(可准备 "+prepN+");"+subSegs.map(sg=>sg.cls.name+"·"+sg.sub+" 另准备 "+(SUBCLASS_PREPARED[sg.lv]||3)+" 个").join(";")+"(不入书)";
+  }
+  else if(wizSeg){
+    const prepN=PREPARED_TABLES.wizard[Math.min(20,Math.max(1,classLevelsOf("wizard")))-1];
+    spellDesc="抄录 "+spellN+" 个法术入法术书;当前可准备 <b>"+prepN+"</b> 个(官方表,长休可换)。升级/换法术时可从书内挑选";
+  }
+  else if(subSegs.length){
+    spellDesc="准备 "+spellN+" 个法术(子职施法,按"+subSegs.map(sg=>sg.cls.name).join("与")+"等级查官方表)";
+  }
   else if(pSeg){
     const pc=pSeg.cls;
     if(pc.spellsKnown) spellDesc="选择 "+spellN+" 个法术(已知法术,固定)";
     else if(pc.prepSpells) spellDesc="准备 "+spellN+" 个法术(每日可换)";
-    else if(pc.spellbookL1){
-      // 法师区分:法术书容量 vs 当前可准备数(官方"准备法术"表)
-      const prepN=PREPARED_TABLES.wizard[Math.min(20,Math.max(1,classLevelsOf("wizard")))-1];
-      spellDesc="抄录 "+spellN+" 个法术入法术书;当前可准备 <b>"+prepN+"</b> 个(官方表,长休可换)。升级/换法术时可从书内挑选";
-    }
   }
   if(maxLv===0&&cantripN===0){hint.innerHTML="<b>"+c.name+"</b>当前等级(1-2级)尚未解锁法术。3级开始可获得法术。";box.innerHTML="";return}
   const spellStat=getSpellStat();
   const dispC=pSeg?pSeg.cls:c;
-  hint.innerHTML="<b>"+dispC.name+(pSeg&&pSeg.sub?"("+pSeg.sub+")":"")+"</b>使用<b>"+spellStat+"</b>施法。请选择 <b>"+cantripN+"</b> 个戏法 和 <b>"+spellN+"</b> 个法术(最高"+RING_NAMES[maxLv-1]+")。"+spellDesc+"。常备法术(种族/职业特性/子职授予)自动拥有,不占戏法与准备位。"+((pSeg&&magicInitiateInfo())?"魔法学徒:额外 2 戏法已计入,一环常备请在上方下拉选择。":"");
+  hint.innerHTML="<b>"+dispC.name+(pSeg&&pSeg.sub?"("+pSeg.sub+")":"")+"</b>使用<b>"+spellStat+"</b>施法。请选择 <b>"+cantripN+"</b> 个戏法 和 <b>"+spellN+"</b> 个法术(最高"+RING_NAMES[maxLv-1]+")"+(spellDesc?"。"+spellDesc:"")+"。常备法术(种族/职业特性/子职授予)自动拥有,不占戏法与准备位。"+((pSeg&&magicInitiateInfo())?"魔法学徒:额外 2 戏法已计入,一环常备请在上方下拉选择。":"");
   // 环阶筛选按钮(顶部)
   const lvOpts=spellLevelOptions();
   let btnHtml='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">';
@@ -3283,15 +3292,16 @@ function importProgressFile(input){
 function slotsStruct(){
   const out={};
   if(!isSpellcaster()) return out;
-  const p=primaryCaster();
-  const otherCasting=castingSegments().slice(1).some(seg=>seg.cls.spell||seg.isSub); // 除第一施法段外的其他施法来源(修复:主职业非施法+兼职EK/诡术师时,自身不应算作"其他"而错误走合并表)
-  const mainAlsoCaster=curClass()&&curClass().spell;
-  if(p&&p.isSub&&!otherCasting&&!mainAlsoCaster){
-    // 唯一施法来源是子职施法者:官方子职表(按该职业等级)
-    const s=SUBCLASS_CASTER_SLOTS[p.lv]||null;
+  const segs=castingSegments();
+  // 施法特性来源 = 全/半施法职业段 + 奥法骑士/诡术师段;魔契师的契约魔法不是"施法特性"
+  // (官方兼职页:若只从某一职业获得施法特性,则遵从该职业自身规则——故 EK/AT×魔契师应查 EK/AT 自身子职表,不进合并表)
+  const srcs=segs.filter(seg=>(seg.cls.spell&&seg.cls.id!=="warlock")||seg.isSub);
+  if(srcs.length===1&&srcs[0].isSub){
+    // 唯一施法特性来源是子职施法者(可与魔契师段共存):官方子职表(按该职业等级)
+    const s=SUBCLASS_CASTER_SLOTS[srcs[0].lv]||null;
     if(s)for(let i=0;i<4;i++)if(s[i]>0)out[RING_NAMES[i]]=s[i];
   }else{
-    // 合并施法等级(含 EK/诡术师 1/3、半施法 1/2)查全施法表;单职业半施法者 ceil 结果与半施法表逐级一致
+    // 其余情形查合并施法等级表(全计/半½上取整/EK·AT⅓下取整,魔契师贡献 0;单一全/半施法职业时结果与其自身表逐级一致)
     const totalCaster=totalCasterLevel();
     if(totalCaster>0){
       const s=FULL_CASTER_SLOTS[totalCaster];
