@@ -10,3 +10,16 @@ desktop.ini
 # Logs / temp
 *.log
 *.tmp
+# 本机私有开发文件(两台电脑各自持有,不入库:推送旧脚本/数据抓取工具/原始数据/工作文档)
+push.cmd
+_push_api.js
+_subclass_spells.json
+_inject_subclass_spells.js
+原始数据/
+工具脚本/
+文档/
+对话交接.md
+x\[0\])
+$null
+# 抓取/审计缓存(DMsBestFriend 外层目录本不在仓库内,此处兜底)
+_tmp_5echm/
