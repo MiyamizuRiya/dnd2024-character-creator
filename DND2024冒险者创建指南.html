@@ -1413,8 +1413,10 @@ function renderSkillPick(){
   const wrap=$("skill-pick-wrap"); if(!S.cls){wrap.classList.add("hide");return}
   const c=curClass();
   wrap.classList.remove("hide");
-  const pool = c.skills==="任意"?ALL_SKILLS:c.skills;
-  $("skill-pick-info").innerHTML=`从下列技能中选择 <b>${c.nSkills}</b> 项获得熟练(已选 ${S.chosenSkills.length}/${c.nSkills})`;
+  // 互斥:排除已从其他来源(背景/种族/专长子项/逸闻学院)获得熟练的技能,已选的保留显示(2026-10-09 U-2)
+  const prof=new Set(allProficientSkills());
+  const pool = (c.skills==="任意"?ALL_SKILLS:c.skills).filter(sk=>S.chosenSkills.includes(sk)||!prof.has(sk));
+  $("skill-pick-info").innerHTML=`从下列技能中选择 <b>${c.nSkills}</b> 项获得熟练(已选 ${S.chosenSkills.length}/${c.nSkills};背景/种族等已熟练项不再列出)`;
   $("skill-pick-grid").innerHTML=pool.map(sk=>{
     const sel=S.chosenSkills.includes(sk);
     const disabled=!sel && S.chosenSkills.length>=c.nSkills;
@@ -1424,9 +1426,22 @@ function renderSkillPick(){
 function toggleSkill(sk){
   const c=curClass();
   const i=S.chosenSkills.indexOf(sk);
-  if(i>=0) S.chosenSkills.splice(i,1);
+  if(i>=0){
+    S.chosenSkills.splice(i,1);
+    // 取消熟练后,清理不再合法的专精选择(专精要求技能已熟练;2026-10-09 N-4)
+    const cleaned=[];
+    if(S.featureChoices)Object.keys(S.featureChoices).forEach(k=>{
+      const f=FEATURE_PICKS.find(x=>x.key===k);
+      if(f&&f.type==='expertise'){
+        const a=S.featureChoices[k],j=a.indexOf(sk);
+        if(j>=0){a.splice(j,1);cleaned.push(f.sheet);}
+      }
+    });
+    if(cleaned.length)toast('已同步移除「'+sk+'」的'+cleaned.join('/')+'选择(该技能熟练已取消)');
+  }
   else if(S.chosenSkills.length<c.nSkills) S.chosenSkills.push(sk);
   renderSkillPick();
+  renderExtraFeatureChoices(); // 联动:专精/附赠熟练池依赖已熟练技能集合(2026-10-09 U-1)
 }
 
 function renderProgress(){
@@ -1629,6 +1644,14 @@ function allProficientSkills(){
     ...featSkills,
     ...((S.featureChoices||{}).lore_bonus||[])];
   return [...new Set(list)];
+}
+// 已获工具熟练(背景工具+职业工具选择+专长子项工具,用于工具选项互斥;2026-10-09 N-5)
+function allProficientTools(){
+  const out=new Set();
+  if(S.bgTool)out.add(S.bgTool);
+  (S.toolChoices||[]).forEach(t=>out.add(t));
+  Object.values(S.featChoices||{}).flat().forEach(x=>{if(x&&!ALL_SKILLS.includes(x))out.add(x);});
+  return out;
 }
 // 已获专精的技能(游荡者/吟游诗人/法师学者/游侠,多来源合并)
 function expertiseSkills(){
@@ -1885,7 +1908,9 @@ function renderToolPick(){
   else {wrap.classList.add("hide");return;}
   wrap.classList.remove("hide");
   $("tool-pick-info").innerHTML=`<b>${label}</b>(已选 ${S.toolChoices.length}/${n})`;
-  $("tool-pick-grid").innerHTML=pool.map(item=>{
+  // 互斥:排除已从其他来源(背景工具/专长子项)获得熟练的工具,已选的保留显示(2026-10-09 N-5)
+  const profTools=allProficientTools();
+  $("tool-pick-grid").innerHTML=pool.filter(item=>S.toolChoices.includes(item)||!profTools.has(item)).map(item=>{
     const sel=S.toolChoices.includes(item);
     const disabled=!sel && S.toolChoices.length>=n;
     return `<div class="skill-opt ${sel?"sel":""} ${disabled?"disabled":""}" onclick="${disabled?"":`toggleToolChoice('${item}')`}">${item}</div>`;
@@ -1915,7 +1940,9 @@ function renderBgToolPick(){
   if(!existing){
     existing=document.createElement("div"); existing.id="bg-tool-pick"; box.appendChild(existing);
   }
-  existing.innerHTML=`<div class="card"><h3>选择工具</h3><p class="note">背景要求:${b.tool}。请选择1项。</p><div class="skill-grid">${pool.map(item=>`<div class="skill-opt ${S.bgTool===item?"sel":""}" onclick="pickBgTool('${item}')">${item}</div>`).join("")}</div></div>`;
+  // 互斥:排除已从其他来源(职业工具/专长子项)获得熟练的工具,已选的保留显示(2026-10-09 N-5)
+  const profTools=allProficientTools();
+  existing.innerHTML=`<div class="card"><h3>选择工具</h3><p class="note">背景要求:${b.tool}。请选择1项。</p><div class="skill-grid">${pool.filter(item=>S.bgTool===item||!profTools.has(item)).map(item=>`<div class="skill-opt ${S.bgTool===item?"sel":""}" onclick="pickBgTool('${item}')">${item}</div>`).join("")}</div></div>`;
 }
 function pickBgTool(item){S.bgTool=item;renderBgToolPick();}
 function renderHarrowing(){
@@ -1957,7 +1984,21 @@ function renderBgs(){
     return `<div class="opt ${S.bg===b.id?"sel":""}" onclick="pickBg('${b.id}')"><div class="t">${b.name}</div><div class="s">${markStats} | ${b.feat}</div></div>`;
   }).join("");
 }
-function pickBg(id){S.bg=id;S.bgMode=null;S.bgPlus2=null;S.bgPlus1=null;S.bgAll1=[];S.bgTool=null;S.featChoices={};S.harrowingChoice=null;renderBgs();renderBgInfo();renderBgToolPick();renderHarrowing();renderBgBonusUI();renderSpeciesChoices();renderStepper();}
+function pickBg(id){
+  S.bg=id;S.bgMode=null;S.bgPlus2=null;S.bgPlus1=null;S.bgAll1=[];S.bgTool=null;S.featChoices={};S.harrowingChoice=null;
+  // 互斥守卫:清理与背景技能重复的已有熟练选择(乱序回退换背景时;2026-10-09 U-2/N-2)
+  const b=curBg();
+  if(b&&b.skill){
+    const dupCls=S.chosenSkills.filter(s=>b.skill.includes(s));
+    if(dupCls.length){S.chosenSkills=S.chosenSkills.filter(s=>!b.skill.includes(s));toast('已移除与背景技能重复的职业技能选择:'+dupCls.join('、'));}
+    ['人类技能','敏锐感官'].forEach(k=>{
+      if(S.speciesChoices[k]&&b.skill.includes(S.speciesChoices[k])){toast('种族子选项「'+S.speciesChoices[k]+'」与背景技能重复,已清除,请在起源步骤重选');delete S.speciesChoices[k];}
+    });
+  }
+  renderBgs();renderBgInfo();renderBgToolPick();renderHarrowing();renderBgBonusUI();renderSpeciesChoices();renderStepper();
+  // 保险联动:背景技能/工具变化影响"职业特性"步骤各选择池(2026-10-09 N-6)
+  renderSkillPick();renderToolPick();renderExtraFeatureChoices();
+}
 function renderBgInfo(){
   const box=$("bg-info"); if(!S.bg){box.innerHTML="";return}
   const b=curBg();
@@ -2050,7 +2091,10 @@ function renderSpecies(){
   $("race-list").innerHTML=SPECIES.map(s=>`<div class="opt ${S.species===s.id?'sel':''}" onclick="pickSpecies('${s.id}')" style="position:relative"><div class="t">${s.name}</div><div class="s">${sizeLabel(s)} · 速度${s.speed}尺${s.darkvision?' · 黑暗视觉':''}</div><button class="btn ghost" style="padding:3px 10px;font-size:.72rem;position:absolute;top:8px;right:8px" onclick="event.stopPropagation();showSpeciesDetail('${s.id}')">详情</button></div>`).join("");
 }
 function sizeLabel(s){return s.sizeOpt==="small"?"小型":s.sizeOpt==="medium"?"中型":"中型或小型"}
-function pickSpecies(id){S.species=id;S.speciesChoices={};renderSpecies();renderSpeciesInfo();renderSpeciesChoices();updateHeightRange();broadcastGranted();}
+function pickSpecies(id){S.species=id;S.speciesChoices={};renderSpecies();renderSpeciesInfo();renderSpeciesChoices();updateHeightRange();broadcastGranted();
+  // 保险联动:种族技能变化影响"职业特性"步骤选择池(2026-10-09 N-6)
+  renderSkillPick();renderToolPick();renderExtraFeatureChoices();
+}
 
 function renderSpeciesInfo(){
   const box=$("race-info"); if(!S.species){box.innerHTML="";return}
@@ -2087,8 +2131,10 @@ function renderSpeciesChoices(){
           feat.choices.forEach(fc=>{
             const picked=S.featChoices[fc.key]||[];
             const multi=fc.multi||1;
-            html+=`<div class="card" style="margin-top:10px"><h3 style="font-size:.95rem">${fc.label}</h3><div class="skill-counter">已选 ${picked.length}/${multi}</div><div class="skill-grid">`;
-            fc.options.forEach(op=>{
+            html+=`<div class="card" style="margin-top:10px"><h3 style="font-size:.95rem">${fc.label}</h3><div class="skill-counter">已选 ${picked.length}/${multi}(其他来源已熟练项不再列出)</div><div class="skill-grid">`;
+            // 互斥:排除已从其他来源获得熟练的技能/工具,已选的保留显示(2026-10-09 N-3/N-5)
+            const profSk=new Set(allProficientSkills()), profTl=allProficientTools();
+            fc.options.filter(op=>picked.includes(op.v)||!(ALL_SKILLS.includes(op.v)?profSk.has(op.v):profTl.has(op.v))).forEach(op=>{
               const s=picked.includes(op.v);
               const dis=!s&&picked.length>=multi;
               const vn=op.v.replace(/'/g,"\\'");
@@ -2100,7 +2146,9 @@ function renderSpeciesChoices(){
       }
     } else {
       html+=`<div class="opt-grid">`;
-      ch.options.forEach(op=>{
+      // 互斥:排除已从其他来源(背景/职业/专长)获得熟练的技能,当前已选值保留显示(2026-10-09 N-1)
+      const profSk=new Set(allProficientSkills());
+      ch.options.filter(op=>S.speciesChoices[ch.key]===op.v||!profSk.has(op.v)).forEach(op=>{
         const vn=op.v.replace(/'/g,"\\'");
         html+=`<div class="opt ${sel===op.v?"sel":""}" onclick="pickSpeciesChoice('${ch.key}','${vn}')"><div class="t">${op.v}</div><div class="s">${op.d!==undefined?op.d:(SKILL_ATTR[op.v]||"")}</div></div>`;
       });
@@ -2118,6 +2166,8 @@ function toggleFeatChoice(key,v){
   if(i>=0) S.featChoices[key].splice(i,1);
   else if(S.featChoices[key].length<multi) S.featChoices[key].push(v);
   renderSpeciesChoices();
+  // 保险联动:专长子项(熟习等)改变熟练集合,影响职业步骤选择池(2026-10-09 N-6)
+  renderSkillPick();renderToolPick();renderExtraFeatureChoices();
 }
 function pickSpeciesChoice(key,v){
   S.speciesChoices[key]=v;
@@ -2125,6 +2175,8 @@ function pickSpeciesChoice(key,v){
   broadcastGranted();
   renderSpeciesChoices();
   renderStepper();
+  // 保险联动:种族技能变化影响"职业特性"步骤选择池(2026-10-09 N-6)
+  renderSkillPick();renderToolPick();renderExtraFeatureChoices();
   if(S.step===STEPS.filter(function(s){return !(s.id==="spell"&&!isSpellcaster())}).length-1) renderSheet();
 }
 
@@ -2732,7 +2784,12 @@ function renderSpellList(){
     allHtml+=sec;
   });
   const secWrap=$("spell-sections");
-  if(secWrap)secWrap.innerHTML=allHtml;
+  if(secWrap){
+    // 滚动保持:各段 .spell-list 为自滚动容器,DOM 重建后按段索引恢复 scrollTop(2026-10-09 U-3)
+    const prevTops=[...secWrap.querySelectorAll('.spell-list')].map(el=>el.scrollTop);
+    secWrap.innerHTML=allHtml;
+    secWrap.querySelectorAll('.spell-list').forEach((el,i)=>{ if(prevTops[i]>0) el.scrollTop=prevTops[i]; });
+  }
   const totC=S.chosenCantrips.filter(n=>!alwaysSet.has(n)).length;
   const totS=S.chosenSpells.filter(n=>!alwaysSet.has(n)).length;
   const ce=$("spell-counter");

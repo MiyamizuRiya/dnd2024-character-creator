@@ -109,6 +109,18 @@ DND工具站源码合集/            ← 本地即 git 仓库(origin=GitHub 上�
 
 ## 八、修复与功能记录
 
+**2026-10-09·创建流程联动与互斥专项(用户报告 3 项+同类 6 项,共 9 项全修,对照《创建流程联动与互斥问题清单(2026-10-09)》)**:
+- **U-1 专精池联动**:toggleSkill 末尾追加 renderExtraFeatureChoices()——"职业特性"步骤内职业技能增删即时刷新专精/逸闻学院附赠熟练池(修复:选完技能须离开步骤再回来才出现);pickSpecies/pickSpeciesChoice/toggleFeatChoice/pickBg 四处追加保险联动(N-6)。
+- **U-2 职业技能互斥**:renderSkillPick pool 过滤 allProficientSkills()(背景/种族/专长已熟练项不再列出,已选保留);pickBg 守卫清理 chosenSkills 与背景技能重复项+toast(乱序换背景)。
+- **U-3 法术列表滚动跳顶**:renderSpellList 重建前记录各段 .spell-list scrollTop,重建后按段索引恢复(修复:选择/移除法术后列表框跳回顶部)。
+- **N-1/N-2 种族技能侧**:敏锐感官/人类技能选项过滤已熟练;换背景时与「人类技能/敏锐感官」已选值重复则清除+toast。
+- **N-3/N-5 专长子项与工具互斥**:熟习子项过滤已熟练技能/工具;新增 allProficientTools()(bgTool+toolChoices+专长子项工具),renderBgToolPick/renderToolPick/熟习子项三处过滤(工具熟练三向互斥)。
+- **N-4 专精合法性**:取消职业技能熟练时,从 expertise 型 featureChoices 同步移除该技能+toast(修复:不熟练的技能残留专精)。
+- 回归 13 项全过(含角色表专精翻倍 +9、整页滚动小视口保持、合集 blob 解码验证);build 三副本一致(952a8242)。
+
+**2026-10-07/08·第 7 轮兼职专项(电脑 B 完成,本机 10-09 拉取,对照《兼职规则实测问题清单(2026-10-07)》)**:
+- MC-1 EK/诡术师×魔契师法术位查错表:slotsStruct 施法特性来源=全/半施法段(魔契师除外)+EK/AT 段,单来源子职施法者查自身表;MC-2 八职业 MULTICLASS_PROF 熟练文本 2024 化(圣武士去重甲/武僧术士法师仅生命骰等);MC-3 法术书描述分列+双句号根治。16 组场景 14 大项与官方一致(含官方范例游侠4/术士3 逐字吻合)。
+
 **2026-09-29(三)·Netlify 主站迁移**:旧站 create-your-dnd2024-pc.netlify.app 所在账号已不可访问且自动部署管线自 09-28 起中断;新建 **https://yourbestdndself.netlify.app**(GitHub 导入,push main 自动部署恢复)。文档中旧地址已全部替换;历史归档清单中的旧地址保留原文(记录当时事实)。GitHub Pages 镜像(miyamizuriya.github.io/dnd2024-character-creator)不受影响,持续可用。
 
 
