@@ -109,6 +109,10 @@ DND工具站源码合集/            ← 本地即 git 仓库(origin=GitHub 上�
 
 ## 八、修复与功能记录
 
+**2026-10-09(二)·魔法探秘兼职支持+装备默认A(用户报告2项,对照《魔法探秘与装备默认A修复记录(2026-10-09)》)**:
+- **魔法探秘(逸闻学院6级)**:loreSecretInfo 改 isLoreBard() 口径——兼职诗人逸闻学院同样获得魔法探秘(修复:原只认主职业,战士主+诗人6逸闻拿不到,与 P1-3 同款模式);pickSubclass/setMcSubclass 换子职后非逸闻学院则清 loreSecrets+toast(换子职状态残留)。主诗人路径本就正常(法术步骤"魔法探秘"卡,187项含法师法术,环阶≤最高法术位,可为戏法)。
+- **装备A/B选择移除**:renderGearPick 选择区删除;renderClassInfo 直接显示"A 组:..."内容(原"已选A组可在职业特性步骤更换");chosenGearText 多组强制A(旧档B自动迁移);setGear 删除。10项真机断言全过,build 三副本一致(96c72e1e)。
+
 **2026-10-09·创建流程联动与互斥专项(用户报告 3 项+同类 6 项,共 9 项全修,对照《创建流程联动与互斥问题清单(2026-10-09)》)**:
 - **U-1 专精池联动**:toggleSkill 末尾追加 renderExtraFeatureChoices()——"职业特性"步骤内职业技能增删即时刷新专精/逸闻学院附赠熟练池(修复:选完技能须离开步骤再回来才出现);pickSpecies/pickSpeciesChoice/toggleFeatChoice/pickBg 四处追加保险联动(N-6)。
 - **U-2 职业技能互斥**:renderSkillPick pool 过滤 allProficientSkills()(背景/种族/专长已熟练项不再列出,已选保留);pickBg 守卫清理 chosenSkills 与背景技能重复项+toast(乱序换背景)。

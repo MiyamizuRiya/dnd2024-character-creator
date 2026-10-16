@@ -1327,11 +1327,11 @@ function gearOptions(c){
   }
   return out;
 }
-function setGear(k){ S.gearChoice=k; renderClassInfo(); }
-// 当前选定的起始装备组文本(未选则回退完整原文)
+// 当前选定的起始装备组文本(A/B选择已于2026-10-09移除,统一默认A组)
 function chosenGearText(){
   const c=curClass(); if(!c) return "";
-  if(S.gearChoice){ const op=gearOptions(c).find(x=>x.k===S.gearChoice); if(op) return op.text; }
+  const gears=gearOptions(c);
+  if(gears.length>1){ S.gearChoice=gears[0].k; return gears[0].text; }
   return c.startGear||"";
 }
 // 按所选装备估算 AC(2024 护甲基础值 + 盾)
@@ -1364,8 +1364,8 @@ function renderClassInfo(){
   html+=`<p style="margin:6px 0;font-size:.85rem"><b style="color:var(--gold2)">起始装备:</b>`;
   const gears=gearOptions(c);
   if(gears.length>1){
-    if(!S.gearChoice||!gears.some(x=>x.k===S.gearChoice)) S.gearChoice=gears[0].k;
-    html+=`已选 ${S.gearChoice} 组(可在「职业特性」步骤更换)`;
+    S.gearChoice=gears[0].k; // A/B装备选择已移除(2026-10-09):统一默认A组
+    html+=`A 组:${gears[0].text}`;
   } else {
     html+=`${c.startGear}`;
   }
@@ -1567,6 +1567,8 @@ function setMainLevels(v){
 }
 function setMcSubclass(idx,name){
   S.multiclass[idx].subClass=name;
+  // 换子职后若不再持有逸闻学院(主/兼职任一),清魔法探秘已选(2026-10-09)
+  if(!isLoreBard()&&S.loreSecrets&&S.loreSecrets.some(Boolean)){S.loreSecrets=[];toast('已清除魔法探秘选择(逸闻学院子职已变更)');}
   renderProgress();
 }
 function showMcSubclassDetail(classId,name){
@@ -1627,6 +1629,8 @@ function pickSubclass(name){
   if((S.level||1)<3){toast("3 级才能选择子职");return;} // 等级守卫:任何路径都拦住非法选择
   S.subClass=name;
   S.druidTerrain=null; // 换子职时清地形选择
+  // 换子职后若不再持有逸闻学院(主/兼职任一),清魔法探秘已选(2026-10-09)
+  if(!isLoreBard()&&S.loreSecrets&&S.loreSecrets.some(Boolean)){S.loreSecrets=[];toast('已清除魔法探秘选择(逸闻学院子职已变更)');}
   renderSubclassPick();
   renderClassFeaturesPick();
   renderStepper();
@@ -1842,16 +1846,8 @@ function setMcOrder(mi,kind,v){
 
 function renderGearPick(){
   const wrap=$("gear-pick-wrap"); if(!wrap) return;
-  const c=curClass(); if(!c){wrap.innerHTML="";return;}
-  const gears=gearOptions(c);
-  if(gears.length<=1){wrap.innerHTML="";return;}
-  if(!S.gearChoice||!gears.some(x=>x.k===S.gearChoice)) S.gearChoice=gears[0].k;
-  let html='<div class="divider"></div><h3>起始装备(主职业 · '+c.name+')</h3><div class="radio-row">';
-  gears.forEach(op=>{
-    html+='<span class="radio-opt '+(S.gearChoice===op.k?'sel':'')+'" onclick="setGear(\''+op.k+'\')">'+op.k+' 组:'+(op.text.length>60?op.text.slice(0,60)+'…':op.text)+'</span>';
-  });
-  html+='</div><p class="note">已选 '+S.gearChoice+' 组(计入角色卡 AC 估算与装备栏)</p>';
-  wrap.innerHTML=html;
+  // A/B装备选择已移除(2026-10-09):统一默认A组,装备内容见「职业」步骤与角色卡
+  wrap.innerHTML="";
 }
 function renderMcSubclassPick(){
   const wrap=$("mc-subclass-wrap"); if(!wrap) return;
@@ -2605,11 +2601,9 @@ function savantInfo(){
   const milestones=[5,7,9,11,13,15,17].filter(l=>classLevelsOf("wizard")>=l).length;
   return {school:school,sub:sub,picks:2+milestones,max:maxSpellLevel()};
 }
-// 吟游诗人·逸闻学院 6级「魔法探秘」:自选两道牧师/德鲁伊/法师列表法术(可为戏法),始终准备
+// 吟游诗人·逸闻学院 6级「魔法探秘」:自选两道牧师/德鲁伊/法师列表法术(可为戏法),始终准备(主职业或兼职逸闻学院均可,2026-10-09)
 function loreSecretInfo(){
-  const c=curClass();
-  if(!c||c.id!=="bard"||S.subClass!=="逸闻学院")return null;
-  if(classLevelsOf("bard")<6)return null;
+  if(!isLoreBard()||isLoreBard()<6)return null;
   return {picks:2,max:maxSpellLevel()};
 }
 const SPELL_LV_ORDER={"戏法":0,"一环":1,"二环":2,"三环":3,"四环":4,"五环":5,"六环":6,"七环":7,"八环":8,"九环":9};
