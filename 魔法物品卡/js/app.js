@@ -206,6 +206,7 @@
         <div class="card-tags"><span class="card-tag">${esc(s.rarity || "")}</span>${consBadge}${attBadge}</div>
       </div>
       <div class="card-meta">${metaLine(s)}</div>
+      ${s.source && s.source !== "城主指南2024" ? `<div style="font-size:.62em;color:#8a7a5c;margin-top:-2px">来源：${esc(s.source)}</div>` : ""}
       <p class="card-desc">${esc(s.description || "")}</p>
       ${chargeHtml(s)}
     </article>`;
@@ -393,7 +394,7 @@
   function exportSelection() {
     if (!state.selEntries.length) { showToast("尚未选择任何物品，无法导出。"); return; }
     const now = new Date().toISOString(); const date = now.slice(0, 10);
-    const data = { format: "dnd2024-itemcards/v1", exportedAt: now, source: "城主指南2024", sourceCount: ITEMS.length, count: state.selEntries.length, items: state.selEntries.map(e => { const s = getEntry(e.itemId); return { itemId: e.itemId, nameZh: s ? s.nameZh : "", nameEn: s ? s.nameEn : "", rarity: s ? s.rarity : "", category: s ? s.category : "", custom: !!(s && s.custom) }; }), customItems: state.customItems, slots: state.selEntries.map(e => state.slotHints[e.uid] || null) };
+    const data = { format: "dnd2024-itemcards/v1", exportedAt: now, source: "DND物品库(城主指南2024+拓展书)", sourceCount: ITEMS.length, count: state.selEntries.length, items: state.selEntries.map(e => { const s = getEntry(e.itemId); return { itemId: e.itemId, nameZh: s ? s.nameZh : "", nameEn: s ? s.nameEn : "", rarity: s ? s.rarity : "", category: s ? s.category : "", custom: !!(s && s.custom) }; }), customItems: state.customItems, slots: state.selEntries.map(e => state.slotHints[e.uid] || null) };
     const json = JSON.stringify(data, null, 2);
     const list = state.selEntries.map((e, i) => { const s = getEntry(e.itemId); const nm = (s && s.nameZh) ? s.nameZh : "（未命名）"; return `${i + 1}. **${nm}**${s && s.nameEn ? "｜" + s.nameEn : ""}　${s ? s.rarity : ""}${s && s.attunement ? "·需同调" : ""}${s && s.consumable ? "·消耗品" : ""}`; }).join("\n");
     const md = `# DND 2024 魔法物品 · 导出\n\n- 共 **${state.selEntries.length}** 张（含重复）\n- 导出时间：${date}\n- 数据来源：城主指南2024（${ITEMS.length} 条）${state.customItems.length ? ` + 自定义 ${state.customItems.length} 条` : ""}\n\n## 已选物品（按当前排序）\n\n${list}\n\n> 把此文件拖回网站「导入」即可恢复物品、张数与排序。下方为机器可读数据，导入时以此为准。\n\n\`\`\`json\n${json}\n\`\`\`\n`;
