@@ -16,11 +16,11 @@
   const CATEGORIES = Array.from(new Set(ITEMS.map(s => s.category))).sort((a, b) => a.localeCompare(b, "zh"));
 
   const state = {
-    filters: { q: "", cat: "all", rarity: "all", att: false, cons: false, onlySelected: false },
+    filters: { q: "", cat: "all", rarity: "all", att: false, cons: false, onlySelected: false, ext: false },
     selEntries: [],          // [{uid, itemId}] —— 每条 = 一张卡；同物品可多条
     openDetails: new Set(),
     customItems: [],
-    pageSize: "A4", zoom: 100, fontScale: 1, cardFont: {}, rowsPerPage: 3, slotHints: {}, _uidSeq: 0, _dragId: null, _pageCount: 0, _editingCustomId: null,
+    pageSize: "A4", zoom: 100, fontScale: 1, cardFont: {}, rowsPerPage: 3, slotHints: {}, _uidSeq: 0, _dragId: null, _pageCount: 0, _editingCustomId: null, showSrc: false,
   };
   const getEntry = id => byId[id] || state.customItems.find(c => c.id === id);
   const countOf = id => state.selEntries.filter(e => e.itemId === id).length;
@@ -134,6 +134,7 @@
       if (f.rarity !== "all" && s.rarity !== f.rarity) return false;
       if (f.att && !s.attunement) return false;
       if (f.cons && !s.consumable) return false;
+      if (f.ext && s.source && s.source !== "城主指南2024") return false; // 不显示拓展内容:仅保留基础(城主指南2024)
       if (f.onlySelected && countOf(s.id) === 0) return false;
       if (!q) return true;
       if (!useFuzzy) {
@@ -206,7 +207,7 @@
         <div class="card-tags"><span class="card-tag">${esc(s.rarity || "")}</span>${consBadge}${attBadge}</div>
       </div>
       <div class="card-meta">${metaLine(s)}</div>
-      ${s.source && s.source !== "城主指南2024" ? `<div style="font-size:.62em;color:#8a7a5c;margin-top:-2px">来源：${esc(s.source)}</div>` : ""}
+      ${state.showSrc && s.source ? `<div style="font-size:.62em;color:#8a7a5c;margin-top:-2px">来源：${esc(s.source)}</div>` : ""}
       <p class="card-desc">${esc(s.description || "")}</p>
       ${chargeHtml(s)}
     </article>`;
@@ -450,6 +451,8 @@
     $("#rarityFilter").addEventListener("change", e => { state.filters.rarity = e.target.value; renderList(); });
     $("#attFilter").addEventListener("change", e => { state.filters.att = e.target.checked; renderList(); });
     $("#consFilter").addEventListener("change", e => { state.filters.cons = e.target.checked; renderList(); });
+    $("#extFilter").addEventListener("change", e => { state.filters.ext = e.target.checked; renderList(); });
+    $("#showSrc").addEventListener("change", e => { state.showSrc = e.target.checked; renderPreview(); });
     $("#onlySelected").addEventListener("change", e => { state.filters.onlySelected = e.target.checked; renderList(); });
 
     const list = $("#itemList");

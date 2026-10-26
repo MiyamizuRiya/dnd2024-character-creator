@@ -97,7 +97,7 @@ iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#0d0
     </button>
     <button type="button" class="gate-card" data-tool="items">
       <span class="ico">🛡</span><span class="t">物品卡</span>
-      <div class="s">魔法物品卡<br>581 条魔法物品 · 排版打印</div>
+      <div class="s">魔法物品卡<br>1620 条魔法物品 · 排版打印</div>
     </button>
   </div>
   <div class="gate-foot">工具间互不干扰 · 右上角「☰ 选择工具」随时返回本页 · 三个工具后台常驻,切换不丢状态</div>
