@@ -340,6 +340,7 @@
     </div>
     <div style="margin-top:14px"><label class="f">外貌描述</label><textarea id="ch-look" placeholder="发色、瞳色、伤疤、衣着风格……" oninput="sync()"></textarea></div>
     <div style="margin-top:14px"><label class="f">角色背景故事</label><textarea id="ch-backstory" placeholder="他/她从何而来?为何踏上冒险?" oninput="sync()"></textarea></div>
+    <div style="margin-top:14px;display:flex;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:170px"><label class="f">基础语言 · 自选一</label><select id="ch-lang1" onchange="setBaseLang(0,this.value)"></select></div><div style="flex:1;min-width:170px"><label class="f">基础语言 · 自选二</label><select id="ch-lang2" onchange="setBaseLang(1,this.value)"></select></div></div>
     <div class="nav">
       <button class="btn ghost" onclick="go('spell')">← 上一步</button>
       <button class="btn" onclick="go('sheet')">下一步:完成角色 →</button>
@@ -456,6 +457,33 @@ const MASTERY=[
   {n:"失衡 Topple",d:"命中时可迫使目标体质豁免(DC=8+调整值+熟练),失败则倒地"},
   {n:"侵扰 Vex",d:"命中造成伤害后,至你下回合结束你对目标的下一次攻击检定具优势"}
 ];
+// 武器→精通词条映射(2024 PHB 武器表,2026-10-26 N-24;源:5echm 玩家手册2024/装备/武器)
+const WEAPON_MASTY={"短棒":"缓速","匕首":"迅击","巨棒":"推离","手斧":"侵扰","标枪":"缓速","轻锤":"迅击","硬头锤":"削弱","长棍":"失衡","镰刀":"迅击","矛":"削弱","飞镖":"侵扰","轻弩":"缓速","短弓":"侵扰","投石索":"缓速","战斧":"失衡","链枷":"削弱","长柄刀":"擦掠","巨斧":"横扫","巨剑":"擦掠","戟":"横扫","骑枪":"失衡","长剑":"削弱","巨锤":"失衡","钉头锤":"削弱","长矛":"推离","刺剑":"侵扰","弯刀":"迅击","短剑":"侵扰","三叉戟":"失衡","战镐":"削弱","战锤":"推离","鞭":"缓速","吹箭筒":"侵扰","手弩":"侵扰","重弩":"推离","长弓":"缓速","火铳":"缓速","手铳":"侵扰"};
+// ASI 专长子选项定义(2026-10-26 N-13~N-20)
+const DMG_TYPES_ALL=['强酸','寒冷','火焰','闪电','雷鸣','毒素','光耀','暗蚀','心灵','力场','钝击','穿刺','挥砍'];
+const RITUAL_CASTER_CLASSES=['吟游诗人','牧师','德鲁伊','术士','法师'];
+function asiSubDef(name){
+  const ring1=(scs)=>SPELLS.filter(sp=>sp.lv==='一环'&&scs.includes(sp.sc)).map(sp=>({v:sp.n,t:sp.n+'('+sp.sc+')'}));
+  const ritualOpts=(ch)=>SPELLS.filter(sp=>sp.ct.includes('仪式')&&sp.lv!=='戏法'&&(ch.featSub&&ch.featSub.ritualClass?sp.cl.includes(ch.featSub.ritualClass):false)).map(sp=>sp.n);
+  if(name==='妖精触碰')return {title:'妖精触碰 · 赠予法术',fields:[{k:'spell',label:'一道一环预言/惑控法术(每长休一次免位施展)',opts:ring1(['预言','惑控'])}]};
+  if(name==='影界触碰')return {title:'影界触碰 · 赠予法术',fields:[{k:'spell',label:'一道一环幻术/死灵法术(每长休一次免位施展)',opts:ring1(['幻术','死灵'])}]};
+  if(name==='仪式施法者')return {title:'仪式施法者 · 仪式法术',fields:[
+    {k:'ritualClass',label:'施法职业列表',opts:RITUAL_CASTER_CLASSES},
+    {k:'ritual1',label:'仪式法术 ①(只能以仪式施展)',opts:ritualOpts},
+    {k:'ritual2',label:'仪式法术 ②(只能以仪式施展)',opts:ritualOpts}],
+    note:'先选职业列表,再从该列表的仪式法术中选择两道;施法时间+10分钟,不消耗法术位。'};
+  if(name==='技艺专家')return {title:'技艺专家 · 熟练与专精',fields:[
+    {k:'skill',label:'获得熟练的技能',opts:()=>ALL_SKILLS.filter(s=>!allProficientSkills().includes(s))},
+    {k:'exp',label:'获得专精的技能(须已熟练)',opts:()=>allProficientSkills()}],
+    note:'第二项所择技能获得专精(熟练加值翻倍,角色表已计入)。'};
+  if(name==='敏锐心灵')return {title:'敏锐心灵 · 知识技能',fields:[{k:'skill',label:'六项知识技能之一',opts:['奥秘','历史','调查','医药','自然','宗教']}],note:'获得该技能熟练(规则上若已熟练则改为专精,工具按熟练计入)'};
+  if(name==='观察力')return {title:'观察力 · 观察技能',fields:[{k:'skill',label:'察觉或调查',opts:['察觉','调查']}],note:'获得该技能熟练(规则上若已熟练则改为专精,工具按熟练计入)'};
+  if(name==='元素掌控')return {title:'元素掌控 · 伤害类型',fields:[{k:'elem',label:'你的法术无视该类型的伤害抗性',opts:['强酸','寒冷','火焰','闪电','雷鸣']}]};
+  if(name==='武器大师')return {title:'武器大师 · 武器精通',fields:[{k:'weapon',label:'一种武器(获得其精通词条)',opts:Object.keys(WEAPON_MASTY)}]};
+  if(name==='能量抗性之恩惠')return {title:'能量抗性之恩惠 · 两种伤害抗性',fields:[{k:'res1',label:'伤害抗性 ①',opts:DMG_TYPES_ALL},{k:'res2',label:'伤害抗性 ②',opts:DMG_TYPES_ALL}]};
+  if(name==='博学多才之恩惠')return {title:'博学多才之恩惠 · 技能专精',fields:[{k:'exp',label:'获得专精的技能(该恩惠已使你获得全部技能熟练)',opts:()=>ALL_SKILLS}]};
+  return null;
+}
 
 const STD_ARRAY={"野蛮人":[15,13,14,10,12,8],"吟游诗人":[8,14,12,13,10,15],"牧师":[14,8,13,10,15,12],"德鲁伊":[8,12,14,13,15,10],"战士":[15,14,13,8,10,12],"武僧":[12,15,13,10,14,8],"圣武士":[15,10,13,8,12,14],"游侠":[12,15,13,8,14,10],"游荡者":[12,15,13,14,10,8],"术士":[10,13,14,8,12,15],"魔契师":[8,14,13,12,10,15],"法师":[8,12,13,15,14,10]};
 
@@ -737,6 +765,18 @@ function renderClassFeaturesPick(){
     if(!S.mcFeatureChoices[mc.classId])S.mcFeatureChoices[mc.classId]={};
     const fc=S.mcFeatureChoices[mc.classId];
     const mLabel='兼职·'+m.name;
+    // 兼职任选熟练(2026-10-26 N-21/N-22):诗人任选1乐器 / 游荡者·游侠任选1技能(本职业列表)
+    if(m.id==='bard'){
+      if(!fc.mcInstrument)fc.mcInstrument='';
+      const profT=allProficientTools();
+      html+='<div class="divider"></div><h3 style="color:var(--gold2);font-family:Georgia,serif;margin:0 0 8px">'+mLabel+' 任选一项乐器熟练</h3><div style="max-width:320px"><select onchange="setMcProf(\''+mc.classId+'\',\'mcInstrument\',this.value)"><option value="">选择乐器…</option>'+INSTRUMENTS.filter(t=>!profT.has(t)).map(t=>'<option '+(fc.mcInstrument===t?'selected':'')+'>'+esc(t)+'</option>').join("")+'</select></div>';
+    }
+    if(m.id==='rogue'||m.id==='ranger'){
+      if(!fc.mcSkill)fc.mcSkill='';
+      const profS=allProficientSkills();
+      const pool=(m.skills==='任意'?ALL_SKILLS:m.skills).filter(s=>!profS.includes(s));
+      html+='<div class="divider"></div><h3 style="color:var(--gold2);font-family:Georgia,serif;margin:0 0 8px">'+mLabel+' 任选一项技能熟练</h3><div style="max-width:320px"><select onchange="setMcProf(\''+mc.classId+'\',\'mcSkill\',this.value)"><option value="">选择技能(本职业列表)…</option>'+pool.map(s=>'<option '+(fc.mcSkill===s?'selected':'')+'>'+esc(s)+'</option>').join("")+'</select></div>';
+    }
     // 战斗风格(战士1/圣武士·游侠2/勇士7,按该兼职职业等级)
     const fsLvs=[]; if(m.id==='fighter'&&mc.levels>=1)fsLvs.push(1); if((m.id==='paladin'||m.id==='ranger')&&mc.levels>=2)fsLvs.push(2); if(m.id==='fighter'&&mc.subClass==='勇士'&&mc.levels>=7)fsLvs.push(7);
     if(fsLvs.length){
@@ -1297,7 +1337,7 @@ function go(target){
   if(steps[idx] && steps[idx].id==="progress") { renderProgress(); }
   if(steps[idx] && steps[idx].id==="origin") { renderBgToolPick(); }
   if(steps[idx] && steps[idx].id==="ability") { renderAbi(); renderAsiPick(); }
-  if(steps[idx] && steps[idx].id==="details") { updateHeightRange(); }
+  if(steps[idx] && steps[idx].id==="details") { updateHeightRange(); fillLangSelects(); }
 }
 
 function renderClasses(){
@@ -1308,7 +1348,7 @@ function pickClass(id){
   const hadMc=S.multiclass&&S.multiclass.length;
   S.cls=id; S.chosenSkills=[]; S.chosenCantrips=[]; S.chosenSpells=[]; S.toolChoices=[];
   if(hadMc){S.multiclass=[];S.mcFeatureChoices={};toast("已更换主职业:原兼职配置已清除,请到「进阶」步骤重新配置");}
-  S.featureChoices={};S.spellMastery=null;
+  S.featureChoices={};S.spellMastery=null;S.mysticArcanum=null;
   S.subClass=null;S.gearChoice=null;S.druidOrder=null;S.clericOrder=null;S.druidTerrain=null;S.chosenInvocations=[];S.chosenFightingStyles=[];S.chosenMetamagic=[];S.chosenManeuvers=[];
   S.miSpellChoice=null; S.savantSpells=[]; S.loreSecrets=[]; S.chosenCantripsByClass=null; S.chosenSpellsByClass=null; // 换职业清自选法术与分段存储
   renderStepper(); renderClasses(); renderClassInfo(); renderSkillPick(); renderToolPick(); renderSubclassPick(); renderClassFeaturesPick(); renderBgs();
@@ -1642,19 +1682,28 @@ const STANDARD_LANGS=["通用语","矮人语","精灵语","巨人语","哥布林
 // 全部已熟练技能(职业+背景+种族+专长+逸闻学院附赠,去重)
 function allProficientSkills(){
   const featSkills=Object.values(S.featChoices||{}).flat().filter(x=>ALL_SKILLS.includes(x));
+  // FEATURE_PICKS 的 skillprof 型选择并入熟练聚合(原初学识/战争学者/妖冶娴都等,2026-10-26 N-1/N-9/N-11)
+  const fpSkills=[];
+  FEATURE_PICKS.forEach(f=>{if(f.type==='skillprof'&&!f.toolPool)((S.featureChoices||{})[f.key]||[]).forEach(s=>{if(ALL_SKILLS.includes(s))fpSkills.push(s);});});
   const list=[...(S.chosenSkills||[]),...(curBg()?curBg().skill:[]),
     ...(S.speciesChoices['敏锐感官']?[S.speciesChoices['敏锐感官']]:[]),
     ...(S.speciesChoices['人类技能']?[S.speciesChoices['人类技能']]:[]),
     ...featSkills,
-    ...((S.featureChoices||{}).lore_bonus||[])];
+    ...fpSkills];
+  // ASI 专长子选项的技能熟练(技艺专家/敏锐心灵/观察力,2026-10-26 N-16/N-17)
+  (S.asiChoices||[]).forEach(ch=>{ if(ch&&ch.featSub&&ch.featSub.skill&&['技艺专家','敏锐心灵','观察力'].includes(ch.feat))list.push(ch.featSub.skill); });
+  // 兼职任选技能熟练(游荡者/游侠,2026-10-26 N-22)
+  Object.values(S.mcFeatureChoices||{}).forEach(fc=>{ if(fc&&fc.mcSkill)list.push(fc.mcSkill); });
   return [...new Set(list)];
 }
-// 已获工具熟练(背景工具+职业工具选择+专长子项工具,用于工具选项互斥;2026-10-09 N-5)
+// 已获工具熟练(背景工具+职业工具选择+专长子项工具+特性工具选择,用于工具选项互斥;2026-10-09 N-5)
 function allProficientTools(){
   const out=new Set();
   if(S.bgTool)out.add(S.bgTool);
   (S.toolChoices||[]).forEach(t=>out.add(t));
   Object.values(S.featChoices||{}).flat().forEach(x=>{if(x&&!ALL_SKILLS.includes(x))out.add(x);});
+  FEATURE_PICKS.forEach(f=>{if(f.type==='skillprof'&&f.toolPool)((S.featureChoices||{})[f.key]||[]).forEach(s=>out.add(s));});
+  Object.values(S.mcFeatureChoices||{}).forEach(fc=>{ if(fc&&fc.mcInstrument)out.add(fc.mcInstrument); }); // 兼职诗人乐器(2026-10-26 N-21)
   return out;
 }
 // 已获专精的技能(游荡者/吟游诗人/法师学者/游侠,多来源合并)
@@ -1663,6 +1712,8 @@ function expertiseSkills(){
   ['rogue_expertise','bard_expertise','wizard_scholar','ranger_expertise'].forEach(k=>{
     ((S.featureChoices||{})[k]||[]).forEach(s=>out.add(s));
   });
+  // ASI 专长子选项的专精(技艺专家/博学多才之恩惠,2026-10-26 N-16/N-20)
+  (S.asiChoices||[]).forEach(ch=>{ if(ch&&ch.featSub&&ch.featSub.exp)out.add(ch.featSub.exp); });
   return out;
 }
 // 武器精通词条数量(各职业合计:战士3,野蛮人/圣武士/游侠/游荡者各2)
@@ -1683,6 +1734,13 @@ function isHunterSub(){
   const c=curClass();
   if(c&&c.id==='ranger'&&S.subClass==='猎人')return getMainClassLevels();
   const m=S.multiclass.find(x=>x.classId==='ranger'&&x.subClass==='猎人');
+  return m?m.levels:0;
+}
+// 主职业或兼职的指定子职等级(2026-10-26 N-7~N-12 子职特性判定)
+function subOfClass(classId,subName){
+  const c=curClass();
+  if(c&&c.id===classId&&S.subClass===subName)return getMainClassLevels();
+  const m=S.multiclass.find(x=>x.classId===classId&&x.subClass===subName);
   return m?m.levels:0;
 }
 function isLoreBard(){
@@ -1708,26 +1766,50 @@ const FEATURE_PICKS=[
   {key:'hunter_defense',label:'猎人(游侠子职) 7级「防守战术」(二选一)',type:'radio',
    options:[{v:'冲出重围',d:'针对你的借机攻击检定具有劣势'},{v:'多重防御',d:'被某生物命中后,该生物本回合内对你的后续攻击AC+4'}],
    show:()=>isHunterSub()>=7,sheet:'防守战术'},
-  {key:'rogue_expertise',label:'游荡者 1级「专精」(选2项已熟练技能,熟练加值翻倍)',type:'expertise',count:()=>2,
+  {key:'rogue_expertise',label:'游荡者 1级「专精」(选2项已熟练技能,熟练加值翻倍;6级起共4项)',type:'expertise',count:()=>classLevelsOf('rogue')>=6?4:2,
    show:()=>classLevelsOf('rogue')>=1,sheet:'游荡者·专精'},
   {key:'bard_expertise',label:'吟游诗人 2级「专精」(已熟练技能熟练加值翻倍)',type:'expertise',count:()=>classLevelsOf('bard')>=9?4:2,
    show:()=>classLevelsOf('bard')>=2,sheet:'吟游诗人·专精'},
   {key:'wizard_scholar',label:'法师 2级「学者」(选1项已熟练技能获得专精)',type:'expertise',count:()=>1,limit:['奥秘','历史','调查','医药','自然','宗教'],
    show:()=>classLevelsOf('wizard')>=2,sheet:'法师·学者'},
-  {key:'ranger_expertise',label:'游侠 2级「熟练探险家」(选1项已熟练且未专精的技能)',type:'expertise',count:()=>1,
+  {key:'ranger_expertise',label:'游侠 2级「熟练探险家」(选1项已熟练且未专精的技能;9级起共3项)',type:'expertise',count:()=>1+(classLevelsOf('ranger')>=9?2:0),
    show:()=>classLevelsOf('ranger')>=2,sheet:'游侠·熟练探险家·专精'},
   {key:'lore_bonus',label:'逸闻学院 3级「附赠熟练」(选3项技能熟练)',type:'skillprof',count:()=>3,
    show:()=>isLoreBard()>=3,sheet:'逸闻学院·附赠熟练'},
   {key:'ranger_langs',label:'游侠 2级「熟练探险家」:两门语言',type:'text2',ph:'语言名,如:精灵语',
    show:()=>classLevelsOf('ranger')>=2,sheet:'游侠·语言'},
-  {key:'weapon_mastery',label:'武器精通词条',type:'text',ph:'用逗号分隔,如:长剑,长弓,匕首',
+  {key:'weapon_mastery',label:'武器精通词条',type:'wmastery',
    show:()=>masteryCount()>0,sheet:'武器精通',note:()=>{const n=masteryCount();return '可选 '+n+' 种武器(长休可换):'+(curClass()&&curClass().id==='fighter'?'战士3种':'2种')+(S.multiclass.length?'(含兼职合计)':'');}},
   {key:'wild_shape',label:'德鲁伊 2级「荒野变形」已知形态(2种)',type:'text2',ph:'野兽形态名,如:狼',
    show:()=>classLevelsOf('druid')>=2,sheet:'荒野变形·已知形态'},
+  {key:'barb_primal',label:'野蛮人 3级「原初学识」(从野蛮人技能列表额外选1项熟练)',type:'skillprof',count:()=>1,limit:['驯兽','运动','威吓','自然','察觉','求生'],
+   show:()=>classLevelsOf('barbarian')>=3,sheet:'原初学识·技能'},
+  {key:'rogue_cants',label:'游荡者 1级「盗贼黑话」语言',type:'text',ph:'语言名(盗贼黑话自动获得)',
+   show:()=>classLevelsOf('rogue')>=1,sheet:'盗贼黑话·语言'},
+  {key:'beast_aspect',label:'兽心道途 6级「兽之形貌」(三选一,长休可换)',type:'radio',
+   options:[{v:'枭·敏锐视觉',d:'获得60尺黑暗视觉;若已有则其范围增加60尺'},{v:'豹·攀爬',d:'获得等同于行走速度的攀爬速度'},{v:'鲑·游泳',d:'获得等同于行走速度的游泳速度'}],
+   show:()=>subOfClass('barbarian','兽心道途')>=6,sheet:'兽之形貌'},
+  {key:'zealot_wrath',label:'狂热者道途 3级「神性之怒」伤害类型(二选一)',type:'radio',
+   options:[{v:'光耀',d:'狂暴激活期间每回合首次命中,额外造成1d6+半野蛮人等级的光耀伤害'},{v:'暗蚀',d:'狂暴激活期间每回合首次命中,额外造成1d6+半野蛮人等级的暗蚀伤害'}],
+   show:()=>subOfClass('barbarian','狂热者道途')>=3,sheet:'神性之怒'},
+  {key:'war_scholar_tool',label:'战斗大师 3级「战争学者」工匠工具(选1种熟练)',type:'skillprof',count:()=>1,toolPool:true,
+   show:()=>subOfClass('fighter','战斗大师')>=3,sheet:'战争学者·工具'},
+  {key:'war_scholar_skill',label:'战斗大师 3级「战争学者」技能(从战士技能列表选1项熟练)',type:'skillprof',count:()=>1,limit:['特技','驯兽','运动','历史','洞悉','威吓','游说','察觉','求生'],
+   show:()=>subOfClass('fighter','战斗大师')>=3,sheet:'战争学者·技能'},
+  {key:'draconic_affinity',label:'龙族术法 6级「元素亲和」伤害类型(五选一)',type:'radio',
+   options:[{v:'强酸',d:'获得强酸伤害抗性;施法造成强酸伤害时,伤害额外加上魅力调整值'},{v:'寒冷',d:'获得寒冷伤害抗性;施法造成寒冷伤害时,伤害额外加上魅力调整值'},{v:'火焰',d:'获得火焰伤害抗性;施法造成火焰伤害时,伤害额外加上魅力调整值'},{v:'闪电',d:'获得闪电伤害抗性;施法造成闪电伤害时,伤害额外加上魅力调整值'},{v:'毒素',d:'获得毒素伤害抗性;施法造成毒素伤害时,伤害额外加上魅力调整值'}],
+   show:()=>subOfClass('sorcerer','龙族术法')>=6,sheet:'元素亲和'},
+  {key:'fey_social',label:'妖精漫游者 3级「妖冶娴都」(三选一熟练)',type:'skillprof',count:()=>1,limit:['欺瞒','表演','游说'],
+   show:()=>subOfClass('ranger','妖精漫游者')>=3,sheet:'妖冶娴都'},
+  {key:'gloom_ironwill',label:'幽域追猎者 7级「钢铁意志」豁免(感知;若已有则智力或魅力)',type:'radio',
+   options:[{v:'感知豁免',d:'获得感知豁免熟练(若已从职业获得感知豁免,请改选智力或魅力)'},{v:'智力豁免',d:'获得智力豁免熟练(仅当已拥有感知豁免时选择)'},{v:'魅力豁免',d:'获得魅力豁免熟练(仅当已拥有感知豁免时选择)'}],
+   show:()=>subOfClass('ranger','幽域追猎者')>=7,sheet:'钢铁意志'},
 ];
 function renderExtraFeatureChoices(){
   const box=$("extra-feature-pick"); if(!box) return;
   if(!S.featureChoices)S.featureChoices={};
+  // 旧档迁移:武器精通 text 值转数组(2026-10-26 N-24)
+  if(typeof S.featureChoices.weapon_mastery==='string'){S.featureChoices.weapon_mastery=S.featureChoices.weapon_mastery.split(/[,，、]/).map(s=>s.trim()).filter(Boolean);}
   let html="";
   FEATURE_PICKS.forEach(f=>{
     let ok=false; try{ok=f.show();}catch(e){}
@@ -1750,7 +1832,10 @@ function renderExtraFeatureChoices(){
         FEATURE_PICKS.forEach(g=>{if(g!==f&&g.type==='expertise')((S.featureChoices||{})[g.key]||[]).forEach(s=>others.add(s));});
         pool=allProficientSkills().filter(s=>(!f.limit||f.limit.includes(s))&&!others.has(s));
       }else{
-        pool=ALL_SKILLS.filter(s=>!allProficientSkills().includes(s));
+        // skillprof 池:支持 limit(技能白名单)与 toolPool(工匠工具池,2026-10-26 N-9)
+        const taken=f.toolPool?allProficientTools():allProficientSkills();
+        const base=f.toolPool?ARTISAN_TOOLS:(f.limit||ALL_SKILLS);
+        pool=base.filter(s=>!taken.includes(s));
       }
       html+='<div class="skill-counter">已选 <b>'+picked.length+'/'+n+'</b></div><div class="skill-grid">';
       pool.forEach(s=>{
@@ -1760,6 +1845,16 @@ function renderExtraFeatureChoices(){
       });
       html+='</div>';
       if(f.type==='expertise')html+='<p class="note">专精使该技能的熟练加值翻倍(角色表技能行已计入)</p>';
+    }else if(f.type==='wmastery'){
+      const picked=S.featureChoices[f.key]||[];
+      const wn=masteryCount();
+      const usedW=new Set(picked.filter(Boolean));
+      html+='<div class="skill-counter">已选 <b>'+usedW.size+'/'+wn+'</b>(每种武器自带固定词条,长休可换)</div><div style="display:flex;flex-direction:column;gap:6px;max-width:320px">';
+      for(let wi=0;wi<wn;wi++){
+        const chosen=picked[wi]||"";
+        html+='<select onchange="setWeaponMastery('+wi+',this.value)"><option value="">武器 '+(wi+1)+'…</option>'+Object.keys(WEAPON_MASTY).filter(w=>!usedW.has(w)||chosen===w).map(w=>'<option value="'+esc(w)+'" '+(chosen===w?'selected':'')+'>'+esc(w)+'('+WEAPON_MASTY[w]+')</option>').join("")+'</select>';
+      }
+      html+='</div>';
     }else if(f.type==='text'){
       html+='<input type="text" value="'+esc(String(val||""))+'" placeholder="'+f.ph+'" oninput="pickFeatureText(\''+f.key+'\',this.value)" style="width:100%;padding:8px 10px;border:1px solid var(--line-strong);border-radius:6px;background:#fffdf5;color:var(--ink);font-family:inherit">';
       const note=typeof f.note==='function'?f.note():'';
@@ -1796,6 +1891,7 @@ function featurePickSheetLines(){
     else if(f.type==='text'){ if(v&&String(v).trim())out.push(f.sheet+':'+String(v).trim()); }
     else if(f.type==='text2'){ const a=(v||[]).filter(Boolean); if(a.length)out.push(f.sheet+':'+a.join('、')); }
     else if(f.type==='expertise'||f.type==='skillprof'){ const a=(v||[]); if(a.length)out.push(f.sheet+':'+a.join('、')); }
+    else if(f.type==='wmastery'){ const a=(v||[]).filter(Boolean); if(a.length)out.push(f.sheet+':'+a.map(w=>w+(WEAPON_MASTY[w]?'('+WEAPON_MASTY[w]+')':'')).join('、')); }
   });
   return out;
 }
@@ -2314,6 +2410,22 @@ function renderAsiPick(){
         }
       }
     }
+    // ASI 专长/恩惠子选项渲染(2026-10-26 N-13~N-20)
+    if((choice.type==='feat'||choice.type==='epic')&&choice.feat){
+      const sub=asiSubDef(choice.feat);
+      if(sub){
+        if(!choice.featSub)choice.featSub={};
+        html+='<div style="margin-top:8px;padding:8px 10px;background:#f5edd8;border:1px dashed var(--line-strong);border-radius:8px"><h3 style="font-size:.85rem;margin:0 0 6px;color:var(--gold2)">'+sub.title+'</h3>';
+        sub.fields.forEach(fd=>{
+          const cur=choice.featSub[fd.k]||"";
+          const opts=typeof fd.opts==='function'?fd.opts(choice):fd.opts;
+          const optHtml=opts.map(function(o){const val=typeof o==='object'?o.v:o;const txt=typeof o==='object'?o.t:o;return '<option value="'+esc(val)+'" '+(cur===val?'selected':'')+'>'+esc(txt)+'</option>';}).join("");
+          html+='<div style="margin:4px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><label class="f" style="font-size:.76rem;margin:0;min-width:120px">'+fd.label+'</label><select style="flex:1;max-width:280px" onchange="setAsiSub('+i+',\''+fd.k+'\',this.value)"><option value="">选择…</option>'+optHtml+'</select></div>';
+        });
+        if(sub.note)html+='<p class="note" style="font-size:.72rem;margin:4px 0 0">'+sub.note+'</p>';
+        html+='</div>';
+      }
+    }
     html+='</div>';
   });
   box.innerHTML=html;
@@ -2369,7 +2481,64 @@ function setAsiPlus(i,which,v){
 function setAsiFeat(i,name){
   if(!S.asiChoices[i]) S.asiChoices[i]={type:'feat'};
   S.asiChoices[i].feat=name;
+  S.asiChoices[i].featSub=null; // 换专长清子选项(2026-10-26 N-13~N-20)
   renderAsiPick();
+}
+function setAsiSub(i,k,v){
+  if(!S.asiChoices[i])S.asiChoices[i]={type:'feat'};
+  if(!S.asiChoices[i].featSub)S.asiChoices[i].featSub={};
+  S.asiChoices[i].featSub[k]=v||"";
+  renderAsiPick();
+  sync();
+}
+// ASI 专长子选项的角色表摘要(2026-10-26)
+function asiSubSummary(ch){
+  if(!ch||!ch.featSub)return "";
+  const fs=ch.featSub;const parts=[];
+  if(fs.spell)parts.push("法术:"+fs.spell);
+  if(fs.ritualClass)parts.push("仪式·"+fs.ritualClass);
+  if(fs.ritual1)parts.push(fs.ritual1);
+  if(fs.ritual2)parts.push(fs.ritual2);
+  if(fs.skill)parts.push("熟练:"+fs.skill);
+  if(fs.exp)parts.push("专精:"+fs.exp);
+  if(fs.elem)parts.push("元素:"+fs.elem);
+  if(fs.weapon)parts.push("精通:"+fs.weapon+"("+(WEAPON_MASTY[fs.weapon]||"")+")");
+  if(fs.res1)parts.push("抗性:"+fs.res1+(fs.res2?"/"+fs.res2:""));
+  return parts.join(" ");
+}
+function setWeaponMastery(wi,v){
+  if(!S.featureChoices)S.featureChoices={};
+  const a=S.featureChoices['weapon_mastery']=S.featureChoices['weapon_mastery']||[];
+  a[wi]=v||null;
+  renderExtraFeatureChoices();sync();
+}
+function setMcProf(classId,k,v){
+  if(!S.mcFeatureChoices)S.mcFeatureChoices={};
+  if(!S.mcFeatureChoices[classId])S.mcFeatureChoices[classId]={};
+  S.mcFeatureChoices[classId][k]=v||"";
+  renderClassFeaturesPick();sync();
+}
+// 基础语言(2026-10-26 N-23):通用语+自选2门+特性来源(盗贼黑话/游侠语言)
+function setBaseLang(i,v){
+  if(!S.baseLangs)S.baseLangs=['',''];
+  S.baseLangs[i]=v||"";
+  sync();
+  if(S.step===STEPS.filter(function(s){return !(s.id==="spell"&&!isSpellcaster())}).length-1) renderSheet();
+}
+function knownLanguages(){
+  const out=['通用语'];
+  (S.baseLangs||[]).forEach(l=>{if(l)out.push(l);});
+  const rc=(S.featureChoices||{}).rogue_cants;
+  if(rc){out.push('盗贼黑话');out.push(rc);}
+  (((S.featureChoices||{}).ranger_langs)||[]).forEach(l=>{if(l)out.push(l);});
+  return [...new Set(out.filter(Boolean))];
+}
+function fillLangSelects(){
+  ['ch-lang1','ch-lang2'].forEach((id,i)=>{
+    const el=document.getElementById(id); if(!el)return;
+    if(!S.baseLangs)S.baseLangs=['',''];
+    el.innerHTML='<option value="">(未选择)</option>'+STANDARD_LANGS.map(l=>'<option '+(S.baseLangs[i]===l?'selected':'')+'>'+l+'</option>').join("");
+  });
 }
 function asiBonusTotal(){
   const out={力量:0,敏捷:0,体质:0,智力:0,感知:0,魅力:0};
@@ -2561,8 +2730,11 @@ function sectionSpellList(key,counts){
     if(p.cls.id==="paladin"&&(S.chosenFightingStyles||[]).includes("受祝福的勇士"))extra="牧师";
   }
   const isMainSection=p&&((p.isSub?"法师":p.cls.name)===key);
+  // 吟游诗人 10级「魔法奥秘」:准备池扩展至吟游诗人/牧师/德鲁伊/法师列表(环阶仍受本段位阶限制,2026-10-26 N-6)
+  const bardSecrets=isMainSection&&p&&p.cls.id==="bard"&&classLevelsOf('bard')>=10;
   return SPELLS.filter(sp=>{
-    const inKey=sp.cl.includes(key)&&(sp.lv==="戏法"||(lvOrder[sp.lv]||0)<=max);
+    const poolOk=bardSecrets?['吟游诗人','牧师','德鲁伊','法师'].some(cn=>sp.cl.includes(cn)):sp.cl.includes(key);
+    const inKey=poolOk&&(sp.lv==="戏法"||(lvOrder[sp.lv]||0)<=max);
     const inExtra=isMainSection&&extra&&sp.lv==="戏法"&&sp.cl.includes(extra);
     return inKey||inExtra;
   });
@@ -2707,7 +2879,20 @@ function renderSpellUI(){
     }
     html+='</div></div>';
   }
-  
+  // 魔契师 11/13/15/17 级「玄奥秘法」:每级一道 6~9 环魔契师法术,无需法术位(2026-10-26 N-5)
+  const wlvMA2=classLevelsOf('warlock');
+  if(wlvMA2>=11){
+    if(!S.mysticArcanum)S.mysticArcanum={};
+    html+='<div class="card" style="margin:0 0 10px;padding:10px 12px"><b style="color:var(--gold2)">玄奥秘法(魔契师11级)</b><span class="note" style="margin-left:8px">11级起每两级一道魔契师法术(六~九环),无需法术位,每道1次/长休,始终准备不占位</span><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">';
+    [['lv6','六环',11],['lv7','七环',13],['lv8','八环',15],['lv9','九环',17]].forEach(function(pr){
+      if(wlvMA2<pr[2])return;
+      const chosen=S.mysticArcanum[pr[0]]||"";
+      const opts=SPELLS.filter(function(sp){return sp.cl.includes('魔契师')&&sp.lv===pr[1]&&!['lv6','lv7','lv8','lv9'].some(function(k2){return S.mysticArcanum[k2]===sp.n;});});
+      html+='<select onchange="setMysticArcanum(\''+pr[0]+'\',this.value)"><option value="">玄奥秘法·'+pr[1]+'…</option>'+opts.map(function(sp){return '<option value="'+esc(sp.n)+'" '+(chosen===sp.n?'selected':'')+'>'+esc(sp.n)+'('+esc(sp.sc)+')</option>';}).join("")+'</select>';
+    });
+    html+='</div></div>';
+  }
+
   // 跨来源常备法术汇总(不在各段列表内的,如种族授予他职业列表法术)
   const alwaysArr=alwaysPreparedSpells();
   const inListNames=new Set();
@@ -2850,6 +3035,12 @@ function setSpellMastery(k,v){
   S.spellMastery[k]=v||null;
   renderSpellUI();
   if(v)toast((k==="sig1"||k==="sig2"?"招牌法术:":"法术精通:")+v+"(总是准备,不占位)");
+}
+function setMysticArcanum(k,v){
+  if(!S.mysticArcanum)S.mysticArcanum={};
+  S.mysticArcanum[k]=v||null;
+  renderSpellUI();
+  if(v)toast("玄奥秘法:"+v+"(常备,无需法术位,每道1次/长休)");
 }
 function updateHeightRange(){
   const sp=curSpecies();
@@ -3013,7 +3204,7 @@ function renderSheet(){
   if(bg){html+=`<h3>背景 · ${bg.name}${bg.ext?`(${esc(bg.ext)} 扩展规则,非 PHB2024)`:""}</h3><pre>`;html+=`属性加成: ${bg.stats.join('、')} → ${S.bgMode==='2+1'?`+2(${S.bgPlus2||'?'}) +1(${S.bgPlus1||'?'})`:S.bgMode==='1+1+1'?`+1+1+1(${S.bgAll1.filter(Boolean).join('/')||'?'})`:'未分配'}\n`;html+=`起源专长: ${bg.feat}\n技能熟练: ${bg.skill.join('、')}\n工具熟练: ${bg.tool}${S.bgTool?' → '+S.bgTool:''}\n装备: ${bg.gear}\n`;
 if(curBg()&&curBg().harrowingEvent&&S.harrowingChoice){html+=`\n【悲惨事件】\n${S.harrowingChoice}\n`;}
 html+=`</pre>`;}
-  if(S.asiChoices&&S.asiChoices.length){const hits=asiLevelsHit();const hsrc=asiSlotSources();if(hits.length){html+=`<h3>属性提升 / 专长</h3><pre>`;S.asiChoices.forEach((ch,i)=>{if(ch&&ch.type){const srcTag=(hsrc[i]&&hits.length>1)?hsrc[i]+" ":"";if(ch.type==="asi"){const t=ch.asiMode==="plus1_1"?`+1(${ch.plusA||"未选"}) +1(${ch.plusB||"未选"})`:`+2(${ch.plus2||"未选"})`;html+=`• ${srcTag}${hits[i]}级:属性提升 ${t}\n`;}else if(ch.type==="feat"){html+=`• ${srcTag}${hits[i]}级:专长-${ch.feat||"未选"}${ch.featAttr?" (+1 "+ch.featAttr+")":""}\n`;}else if(ch.type==="epic"){html+=`• ${srcTag}${hits[i]}级:传奇恩惠-${ch.feat||"未选"}${ch.featAttr?" (+1 "+ch.featAttr+")":""}\n`;}}});html+=`</pre>`;}}
+  if(S.asiChoices&&S.asiChoices.length){const hits=asiLevelsHit();const hsrc=asiSlotSources();if(hits.length){html+=`<h3>属性提升 / 专长</h3><pre>`;S.asiChoices.forEach((ch,i)=>{if(ch&&ch.type){const srcTag=(hsrc[i]&&hits.length>1)?hsrc[i]+" ":"";if(ch.type==="asi"){const t=ch.asiMode==="plus1_1"?`+1(${ch.plusA||"未选"}) +1(${ch.plusB||"未选"})`:`+2(${ch.plus2||"未选"})`;html+=`• ${srcTag}${hits[i]}级:属性提升 ${t}\n`;}else if(ch.type==="feat"){const subTxt=asiSubSummary(ch);html+=`• ${srcTag}${hits[i]}级:专长-${ch.feat||"未选"}${ch.featAttr?" (+1 "+ch.featAttr+")":""}${subTxt?" ｜ "+subTxt:""}\n`;}else if(ch.type==="epic"){const subTxtE=asiSubSummary(ch);html+=`• ${srcTag}${hits[i]}级:传奇恩惠-${ch.feat||"未选"}${ch.featAttr?" (+1 "+ch.featAttr+")":""}${subTxtE?" ｜ "+subTxtE:""}\n`;}}});html+=`</pre>`;}}
   if(S.speciesChoices["人类专长"]&&Object.keys(S.featChoices).length){html+=`<h3>专长子项</h3><pre>`;for(const k in S.featChoices){html+=`• ${k}: ${S.featChoices[k].join('、')}\n`;}html+=`</pre>`;}
   {const fpLines=featurePickSheetLines();if(fpLines.length){html+=`<h3>特性选择</h3><pre>`;fpLines.forEach(l=>html+=`• ${l}\n`);html+=`</pre>`;}}
   if(c){const gos=gearOptions(c);const chosen=S.gearChoice&&gos.find(x=>x.k===S.gearChoice);html+=`<h3>起始装备${chosen?` · 已选 ${chosen.k} 组`:''}</h3><pre>${chosen?chosen.text:c.startGear}</pre>`;}
@@ -3033,6 +3224,11 @@ html+=`</pre>`;}
     html+=`</pre>`;
   }
   const look=$('ch-look').value,story=$('ch-backstory').value,deity=$('ch-deity').value,ga=$('ch-gender-age').value,wt=$('ch-weight').value;
+  // 语言行(2026-10-26 N-23:通用语+自选2门+特性来源)
+  const langs=knownLanguages();
+  if(langs.length>1){
+    html+=`<h3>语言</h3><pre>${esc(langs.join('、'))}\n</pre>`;
+  }
   if(look||story||deity||ga||wt){
     html+=`<h3>角色札记</h3><pre>`;
     if(ga)html+=`性别/年龄: ${esc(ga)}\n`;
@@ -3223,7 +3419,7 @@ function resetAll(){
   S.loreSecrets=[];
   S.featureChoices={};
   S.mcFeatureChoices={};
-  S.spellMastery=null;
+  S.spellMastery=null;S.mysticArcanum=null;
   S.chosenCantripsByClass=null;
   S.chosenSpellsByClass=null;
   S.height=170;
@@ -3485,6 +3681,7 @@ function init(){
   renderStepper();renderClasses();renderBgs();renderSpecies();renderAbi();
   if(restored){
     restoreInputs();
+    fillLangSelects();
     renderLevelInfo();
     renderClassInfo();
     renderSkillPick();
@@ -3572,6 +3769,21 @@ function alwaysPreparedSpells(){
   // 吟游诗人·逸闻学院 6级魔法探秘:自选法术始终准备
   const lor=loreSecretInfo();
   if(lor)(S.loreSecrets||[]).forEach(n=>{if(n)push(n,"吟游诗人·魔法探秘");});
+  // ASI 专长子选项的法术(妖精/影界触碰赠予,仪式施法者两道,2026-10-26 N-13~N-15)
+  (S.asiChoices||[]).forEach(ch=>{
+    if(ch&&ch.featSub){
+      if(ch.featSub.spell)push(ch.featSub.spell,"专长·"+ch.feat);
+      if(ch.featSub.ritual1)push(ch.featSub.ritual1,"专长·仪式施法者(仅仪式)");
+      if(ch.featSub.ritual2)push(ch.featSub.ritual2,"专长·仪式施法者(仅仪式)");
+    }
+  });
+  // 魔契师 11/13/15/17 玄奥秘法:四道 6~9 环魔契师法术,无需法术位,每道1次/长休(2026-10-26 N-5)
+  const wlvMA=classLevelsOf('warlock');
+  if(wlvMA>=11&&S.mysticArcanum){
+    [['lv6',11],['lv7',13],['lv8',15],['lv9',17]].forEach(function(pr){
+      if(wlvMA>=pr[1]&&S.mysticArcanum[pr[0]])push(S.mysticArcanum[pr[0]],"魔契师·玄奥秘法");
+    });
+  }
   // 法师18法术精通/20招牌法术:总是准备(2026-09-29)
   if(classLevelsOf('wizard')>=18&&S.spellMastery){
     if(S.spellMastery.first)push(S.spellMastery.first,"法师·法术精通(18级)");
